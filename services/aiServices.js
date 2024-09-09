@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 // Function to send user data to the AI service
-const sendUserDataToAI = async ({ tribe, state, age, gender, duration }) => {
+const sendUserDataToAI = async ({ tribe, state, age, gender, duration, dislikedMeals }) => {
   try {
     // Define the API endpoint
     const apiUrl = 'http://213.199.35.161/get_mealplan/';
@@ -12,7 +12,8 @@ const sendUserDataToAI = async ({ tribe, state, age, gender, duration }) => {
       state: state || '',  // Ensure state is a string
       age: age || 0,       // Ensure age is an integer
       gender: gender || '',// Ensure gender is a string
-      is_seven_days: duration === 'one week'  // Adjust query parameter based on duration
+      is_seven_days: duration === 'one week',  // Adjust query parameter based on duration
+      disliked_meals: dislikedMeals || '', 
     };
 
     // Log the request details for debugging

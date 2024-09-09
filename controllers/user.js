@@ -1,4 +1,5 @@
 const { User } = require('../models/user');
+const MealPlan = require('../models/mealPlan');
 const { Auth } = require('../middleware/auth');
 const { sendVerificationEmail } = require('../services/emailService');
 const { sendUserDataToAI } = require('../services/aiServices');
@@ -11,10 +12,8 @@ const auth = new Auth();
 const verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
-    
 
     const user = await User.findOne({ verificationToken: token, isVerified: false });
-    
 
     if (!user) return res.status(400).json({ error: 'Invalid token or already verified' });
 
@@ -23,34 +22,35 @@ const verifyEmail = async (req, res) => {
     user.verificationToken = undefined;
     await user.save();
 
-    // Log user details before sending to AI service
-    console.log('User details at verification:', {
+
+    // Generate meal plan using AI service
+    const mealPlanData = await sendUserDataToAI({
       tribe: user.tribe,
       state: user.state,
       age: user.age,
       gender: user.gender,
-      duration: user.duration
+      duration: user.duration,
+      dislikedMeals: user.dislikedMeals
     });
+    console.log('Meal Plan Data:', mealPlanData);
 
-    // Generate meal plans
-    const mealPlan = await sendUserDataToAI({
-      tribe: user.tribe,
-      state: user.state,
-      age: user.age,
-      gender: user.gender,
-      duration: user.duration
+
+    // Save the meal plan in the MealPlan table
+    const mealPlan = new MealPlan({
+      userId: user._id,
+      duration: user.duration,
+      plan: mealPlanData
     });
-
-    user.mealPlan = mealPlan;
-    await user.save();
+    await mealPlan.save();
 
     // Generate authentication token
     const authToken = auth.generateAuthToken(user);
 
     res.status(200).json({
       message: 'Email verified successfully',
-      mealPlan,
-      token: authToken
+      mealPlan: mealPlanData,
+      token: authToken,
+      userData:user
     });
   } catch (error) {
     console.error('Error verifying email:', error);
@@ -58,21 +58,19 @@ const verifyEmail = async (req, res) => {
   }
 };
 
+
 // Register User
 const register = async (req, res) => {
   try {
-    const { fullName, email, weight, height, age, dietaryNeeds, duration, type, tribe, state, gender } = req.body;
-    console.log('Received registration data:', {
-      fullName, email, weight, height, age, dietaryNeeds, duration, type, tribe, state, gender
-    });
+    const { fullName, email, weight, height, age, dietaryNeeds,dislikedMeals, duration, tribe, state, gender } = req.body;
 
     // Validate if all required fields are present
-    if (!fullName || !email || !weight || !height || !age || !dietaryNeeds || !duration || !type || !tribe || !state || !gender) {
+    if (!fullName || !email || !weight || !height || !age || !dietaryNeeds || !duration || !tribe || !state || !gender) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
     let user = await User.findOne({ email });
-    console.log('Retrieved user:', user);
+
     if (!user) {
       // Create a new user and send verification email
       const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -83,17 +81,20 @@ const register = async (req, res) => {
         height,
         age,
         dietaryNeeds,
+        dislikedMeals,
         duration,
-        type,
         tribe,
         state,
         gender,
         verificationToken,
       });
       await user.save();
+
+      console.log(user);
+
       console.log(`Verification token for ${email}: ${verificationToken}`);
-      
       await sendVerificationEmail(user, verificationToken);
+
       return res.status(200).json({ message: 'Please verify your email to complete registration.' });
     }
 
@@ -103,40 +104,36 @@ const register = async (req, res) => {
       user.verificationToken = verificationToken;
       await user.save();
       await sendVerificationEmail(user, verificationToken);
+
       return res.status(200).json({ message: 'A new verification email has been sent to your email address.' });
     }
 
-    // Log user details before sending to AI service
-    console.log('User details:', {
-      tribe: user.tribe,
-      state: user.state,
-      age: user.age,
-      gender: user.gender,
-      duration: user.duration
-    });
-
-    // If already verified, generate meal plan and return token
-    const mealPlan = await sendUserDataToAI({
-      tribe: user.tribe,
-      state: user.state,
-      age: user.age,
-      gender: user.gender,
-      duration: user.duration
-    });
-
-    user.mealPlan = mealPlan;
-    await user.save();
     
+
+    // If already verified, generate meal plan and save it in the MealPlan table
+    const mealPlanData = await sendUserDataToAI({
+      tribe: user.tribe,
+      state: user.state,
+      age: user.age,
+      gender: user.gender,
+      duration: user.duration,
+      dislikedMeals: user.dislikedMeals
+    });
+
+    const mealPlan = new MealPlan({
+      userId: user._id,
+      duration: user.duration,
+      plan: mealPlanData
+    });
+    await mealPlan.save();
 
     const token = auth.generateAuthToken(user);
-    res.status(200).json({ message: 'Registration successful', mealPlan, token });
-    
+    res.status(200).json({ message: 'Registration successful', mealPlan: mealPlanData, token });
   } catch (error) {
     console.error('Error registering user:', error);
     res.status(500).json({ error: 'Failed to register user' });
   }
 };
-
 // Login User
 const login = async (req, res) => {
   try {
@@ -154,8 +151,11 @@ const login = async (req, res) => {
 
     if (!user.isVerified) return res.status(400).json({ error: 'Email not verified' });
 
+    // Fetch the most recent meal plan
+    const mealPlan = await MealPlan.findOne({ userId: user._id }).sort({ createdAt: -1 });
+
     const token = auth.generateAuthToken(user);
-    res.status(200).json({ token, user });
+    res.status(200).json({ token, user, mealPlan });
   } catch (error) {
     console.error('Error logging in user:', error);
     res.status(500).json({ error: 'Failed to log in user' });
@@ -203,12 +203,71 @@ const googleCallback = (req, res) => {
       await user.save();
       console.log(`User logged in with Google: ${email}`);
 
+      // Fetch the most recent meal plan
+      const mealPlan = await MealPlan.findOne({ userId: user._id }).sort({ createdAt: -1 });
+
       const token = auth.generateAuthToken(user);
-      res.status(200).json({ token, user });
+      res.status(200).json({ token, user, mealPlan });
     } catch (error) {
       console.error('Error during Google login:', error);
       res.status(500).json({ error: 'Failed to process Google login' });
     }
   })(req, res);
 };
-module.exports = { register, verifyEmail, login, googleLogin, googleCallback };
+
+const editUser = async (req, res) => {
+  try {
+    // Use the email from the decoded token to find the user
+    const user = await User.findOne({ email: req.user.email });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const updateData = req.body;
+
+    // Validate input data
+    const validFields = [
+      'fullName',
+      'weight',
+      'height',
+      'age',
+      'dietaryNeeds',
+      'dislikedMeals',
+      'duration',
+      'tribe',
+      'state',
+      'gender'
+    ];
+
+    // Filter the updateData to include only valid fields
+    const filteredUpdateData = Object.keys(updateData).reduce((acc, key) => {
+      if (validFields.includes(key)) {
+        acc[key] = updateData[key];
+      }
+      return acc;
+    }, {});
+
+    // Update the user
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      { $set: filteredUpdateData },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found after update' });
+    }
+
+    res.status(200).json({
+      message: 'User details updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error updating user details:', error);
+    res.status(500).json({ error: 'Failed to update user details' });
+  }
+};
+
+
+module.exports = { register, verifyEmail, login, googleLogin, googleCallback, editUser };
