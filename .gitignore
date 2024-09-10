@@ -3,4 +3,4 @@ package-lock.json
 package.json
 o.js
 .env
-env
+env".env" 
