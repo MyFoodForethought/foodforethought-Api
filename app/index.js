@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require('express');
+const MongoStore = require('connect-mongo');
 const session = require('express-session');
 const passport = require('passport');
 const bodyParser = require('body-parser');
@@ -28,10 +29,20 @@ app.use(function (req, res, next) {
     next();
 });
 
+// app.use(session({
+//     secret: process.env.SESSION_SECRET,
+//     resave: false,
+//     saveUninitialized: true,
+//     cookie: { secure: false } // Set secure: true if using HTTPS
+// }));
+
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: true,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGO_URI
+    }),
     cookie: { secure: false } // Set secure: true if using HTTPS
 }));
 
