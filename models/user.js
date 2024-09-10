@@ -1,6 +1,16 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+
+const dropUserCollection = async () => {
+  try {
+    await User.collection.drop();
+    console.log('User collection dropped successfully');
+  } catch (error) {
+    console.error('Error dropping User collection:', error.message);
+  }
+};
+
 // Define the schema
 const userSchema = new Schema({
   fullName: { type: String },
