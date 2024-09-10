@@ -49,14 +49,14 @@ const PORT = process.env.PORT || 3000;
 
 async function startServer() {
     try {
-        await connectDB();
-        // await dropUserCollection()
+        await connectDB(); // Ensure the database is connected before starting the server
+        // await dropUserCollection() // Uncomment if you need to drop the user collection
         app.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`);
         });
     } catch (error) {
         console.error('Failed to connect to the database', error);
-        process.exit(1);
+        process.exit(1); // Exit if the DB connection fails
     }
 }
 
