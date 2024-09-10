@@ -19,25 +19,29 @@
 const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
 
-const uri = process.env.MONGO_URI; // Use environment variable for MongoDB URI
+// Use environment variables for sensitive information
+const uri = process.env.MONGO_URI || 'mongodb://localhost:27017';
 
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
+  connectTimeoutMS: 30000 // Increase timeout
 });
 
 async function connectDB() {
   try {
+    // Connect the client to the server
     await client.connect();
+    // Confirm connection success
     await client.db("admin").command({ ping: 1 });
     console.log("Successfully connected to MongoDB!");
-    return client;
+    return client; // Return the client so you can use it elsewhere if needed
   } catch (error) {
     console.error('Failed to connect to MongoDB', error);
-    throw error;
+    throw error; // Rethrow to handle errors in the main server logic
   }
 }
 
