@@ -23,13 +23,14 @@ require('dotenv').config();
 const uri = process.env.MONGO_URI || 'mongodb://localhost:27017';
 
 const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
-  connectTimeoutMS: 30000 // Increase timeout
-});
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    },
+    connectTimeoutMS: 30000, // Increase connection timeout
+    socketTimeoutMS: 45000 // Increase socket timeout
+  });
 
 async function connectDB() {
   try {
