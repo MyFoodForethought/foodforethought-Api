@@ -16,6 +16,13 @@ const sendVerificationEmail = async (user, token) => {
       subject: 'Please verify your email',
       text: `Hi ${user.fullName}, please verify your email by clicking on the following link: \nhttps://foodforethought-api.onrender.com/api/verify-email?token=${token}`,
     };
+    // const mailOptions = {
+    //   from: process.env.EMAIL,
+    //   to: user.email,
+    //   subject: 'Please verify your email',
+    //   text: `Hi ${user.fullName}, please verify your email by clicking on the following link: \nhttp://localhost:3000/api/verify-email?token=${token}`,
+    // };
+    
 
     await transporter.sendMail(mailOptions);
     console.log('Verification email sent successfully');

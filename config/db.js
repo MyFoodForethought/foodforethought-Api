@@ -2,7 +2,7 @@
 
 // async function connectDB() {
 //     try {
-//         await mongoose.connect(process.env.MONGO_URI, {
+//         await mongoose.connect(process.env.MONGO_URI_LOCAL, {
 //             // useNewUrlParser: true, // Remove this
 //             // useUnifiedTopology: true, // Remove this
 //         });

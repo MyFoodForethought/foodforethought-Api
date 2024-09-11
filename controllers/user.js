@@ -32,7 +32,7 @@ const verifyEmail = async (req, res) => {
       duration: user.duration,
       dislikedMeals: user.dislikedMeals
     });
-    console.log('Meal Plan Data:', mealPlanData);
+    
 
 
     // Save the meal plan in the MealPlan table
