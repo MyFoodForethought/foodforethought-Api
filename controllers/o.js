@@ -5,9 +5,20 @@ const session = require('express-session');
 const passport = require('passport');
 const { authRouter } = require('../Routes/route');
 const { connectDB } = require('../config/db');
-const {dropUserCollection} = require('../models/user')
+const { dropUserCollection } = require('../models/user')
 require('../config/passport');
 const oauthRouter = require('../Routes/oauth');
+const winston = require('winston');
+
+// Initialize Winston logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.simple(),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+  ],
+});
 
 const app = express();
 
@@ -25,6 +36,12 @@ app.use(function (req, res, next) {
     next();
 });
 
+// Request logging middleware
+app.use((req, res, next) => {
+  logger.info(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
 // Session setup
 app.use(session({
     secret: process.env.SESSION_SECRET,
@@ -33,7 +50,7 @@ app.use(session({
     store: MongoStore.create({
         mongoUrl: process.env.MONGO_URI
     }),
-    cookie: { secure: false } // Set secure: true if using HTTPS
+    cookie: { secure: process.env.NODE_ENV === 'production' } // Set secure: true if using HTTPS
 }));
 
 // Passport setup
@@ -49,6 +66,23 @@ app.get('/', (req, res) => {
     res.send('OAuth authentication successful. You can now use the application.');
 });
 
+// Health check route
+app.get('/health', async (req, res) => {
+  try {
+    await connectDB();
+    res.status(200).json({ status: 'OK', database: 'Connected' });
+  } catch (error) {
+    logger.error('Health check failed:', error);
+    res.status(500).json({ status: 'Error', database: 'Disconnected' });
+  }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  logger.error(err.stack);
+  res.status(500).send('Something went wrong!');
+});
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 async function startServer() {
@@ -56,12 +90,20 @@ async function startServer() {
         await connectDB();  // Connect to MongoDB
         // await dropUserCollection() // Uncomment if you need to drop the user collection
         app.listen(PORT, () => {
-            console.log(`Server is running on port ${PORT}`);
+            logger.info(`Server is running on port ${PORT}`);
         });
     } catch (error) {
-        console.error('Failed to connect to the database', error);
+        logger.error('Failed to connect to the database', error);
         process.exit(1);  // Exit if DB connection fails
     }
 }
 
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  logger.info('Shutting down gracefully');
+  process.exit(0);
+});
+
 startServer();
+
+module.exports = app; // For testing purposes
