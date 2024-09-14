@@ -4,7 +4,7 @@ const MongoStore = require('connect-mongo');
 const session = require('express-session');
 const passport = require('passport');
 const { authRouter } = require('../Routes/route');
-const { connectDB } = require('../config/db');
+const { connectDB, closeConnection, checkDatabaseHealth } = require('../config/db');
 const { dropUserCollection } = require('../models/user')
 require('../config/passport');
 const oauthRouter = require('../Routes/oauth');
@@ -50,7 +50,7 @@ app.use(session({
     store: MongoStore.create({
         mongoUrl: process.env.MONGO_URI
     }),
-    cookie: { secure: process.env.NODE_ENV === 'production' } // Set secure: true if using HTTPS
+    cookie: { secure: true} // Set secure: true if using HTTPS
 }));
 
 // Passport setup
@@ -69,11 +69,15 @@ app.get('/', (req, res) => {
 // Health check route
 app.get('/health', async (req, res) => {
   try {
-    await connectDB();
-    res.status(200).json({ status: 'OK', database: 'Connected' });
+    const isDatabaseHealthy = await checkDatabaseHealth();
+    if (isDatabaseHealthy) {
+      res.status(200).json({ status: 'OK', database: 'Connected' });
+    } else {
+      res.status(503).json({ status: 'Error', database: 'Disconnected' });
+    }
   } catch (error) {
     logger.error('Health check failed:', error);
-    res.status(500).json({ status: 'Error', database: 'Disconnected' });
+    res.status(500).json({ status: 'Error', message: 'Health check failed' });
   }
 });
 
@@ -85,11 +89,13 @@ app.use((err, req, res, next) => {
 
 // Start the server
 const PORT = process.env.PORT || 3000;
+let server;
+
 async function startServer() {
     try {
         await connectDB();  // Connect to MongoDB
         // await dropUserCollection() // Uncomment if you need to drop the user collection
-        app.listen(PORT, () => {
+        server = app.listen(PORT, () => {
             logger.info(`Server is running on port ${PORT}`);
         });
     } catch (error) {
@@ -99,9 +105,38 @@ async function startServer() {
 }
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
-  logger.info('Shutting down gracefully');
-  process.exit(0);
+async function gracefulShutdown(signal) {
+  logger.info(`Received ${signal}. Shutting down gracefully.`);
+  if (server) {
+    server.close(() => {
+      logger.info('HTTP server closed.');
+    });
+  }
+  
+  try {
+    await closeConnection();
+    logger.info('Database connection closed.');
+    process.exit(0);
+  } catch (err) {
+    logger.error('Error during graceful shutdown:', err);
+    process.exit(1);
+  }
+}
+
+// Listen for termination signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Uncaught exception handler
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  gracefulShutdown('uncaughtException');
+});
+
+// Unhandled rejection handler
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('unhandledRejection');
 });
 
 startServer();
