@@ -50,7 +50,7 @@ app.use(session({
     store: MongoStore.create({
         mongoUrl: process.env.MONGO_URI
     }),
-    cookie: { secure: true} // Set secure: true if using HTTPS
+    cookie: { secure: process.env.NODE_ENV === 'production' } // Set secure: true if using HTTPS
 }));
 
 // Passport setup

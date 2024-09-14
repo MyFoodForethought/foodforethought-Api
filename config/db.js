@@ -15,7 +15,7 @@
 
 // module.exports = { connectDB };
 
-const { MongoClient, ServerApiVersion, MongoServerError, MongoNetworkError } = require('mongodb');
+const { MongoClient, ServerApiVersion } = require('mongodb');
 const winston = require('winston');
 require('dotenv').config();
 
@@ -33,15 +33,17 @@ const logger = winston.createLogger({
 const uri = process.env.MONGO_URI || 'mongodb://localhost:27017';
 
 const client = new MongoClient(uri, {
-  maxPoolSize: 10, // Adjust based on your needs
+  maxPoolSize: 10,
   minPoolSize: 5,
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
   },
-  connectTimeoutMS: 30000, // Increase connection timeout
-  socketTimeoutMS: 45000 // Increase socket timeout
+  connectTimeoutMS: 30000,
+  socketTimeoutMS: 45000,
+  serverSelectionTimeoutMS: 30000, // Added to increase server selection timeout
+  heartbeatFrequencyMS: 10000,     // Added to check connection more frequently
 });
 
 async function connectDB(maxRetries = 5, delay = 5000) {
@@ -79,4 +81,16 @@ async function closeConnection() {
   }
 }
 
-module.exports = { connectDB, closeConnection };
+// Database health check function
+async function checkDatabaseHealth() {
+  try {
+    await client.db("admin").command({ ping: 1 });
+    logger.info("Database health check: OK");
+    return true;
+  } catch (error) {
+    logger.error("Database health check failed:", error);
+    return false;
+  }
+}
+
+module.exports = { connectDB, closeConnection, checkDatabaseHealth };
