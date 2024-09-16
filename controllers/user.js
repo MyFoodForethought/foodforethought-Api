@@ -5,23 +5,30 @@ const { sendVerificationEmail } = require('../services/emailService');
 const { sendUserDataToAI } = require('../services/aiServices');
 const passport = require('passport');
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 
 const auth = new Auth();
 
 // Verify Email
 const verifyEmail = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { token } = req.query;
 
-    const user = await User.findOne({ verificationToken: token, isVerified: false });
+    const user = await User.findOne({ verificationToken: token, isVerified: false }).session(session);
 
-    if (!user) return res.status(400).json({ error: 'Invalid token or already verified' });
+    if (!user) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ error: 'Invalid token or already verified' });
+    }
 
     // Mark the user as verified
     user.isVerified = true;
     user.verificationToken = undefined;
-    await user.save();
-
+    await user.save({ session });
 
     // Generate meal plan using AI service
     const mealPlanData = await sendUserDataToAI({
@@ -32,8 +39,6 @@ const verifyEmail = async (req, res) => {
       duration: user.duration,
       dislikedMeals: user.dislikedMeals
     });
-    
-
 
     // Save the meal plan in the MealPlan table
     const mealPlan = new MealPlan({
@@ -41,35 +46,47 @@ const verifyEmail = async (req, res) => {
       duration: user.duration,
       plan: mealPlanData
     });
-    await mealPlan.save();
+    await mealPlan.save({ session });
 
     // Generate authentication token
     const authToken = auth.generateAuthToken(user);
+
+    await session.commitTransaction();
+    session.endSession();
 
     res.status(200).json({
       message: 'Email verified successfully',
       mealPlan: mealPlanData,
       token: authToken,
-      userData:user
+      userData: user
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error('Error verifying email:', error);
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      return res.status(503).json({ error: 'Database operation timed out. Please try again later.' });
+    }
     res.status(500).json({ error: 'Failed to verify email' });
   }
 };
 
-
 // Register User
 const register = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const { fullName, email, weight, height, age, dietaryNeeds,dislikedMeals, duration, tribe, state, gender } = req.body;
+    const { fullName, email, weight, height, age, dietaryNeeds, dislikedMeals, duration, tribe, state, gender } = req.body;
 
     // Validate if all required fields are present
     if (!fullName || !email || !weight || !height || !age || !dietaryNeeds || !duration || !tribe || !state || !gender) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email }).session(session);
 
     if (!user) {
       // Create a new user and send verification email
@@ -88,13 +105,13 @@ const register = async (req, res) => {
         gender,
         verificationToken,
       });
-      await user.save();
-
-      console.log(user);
+      await user.save({ session });
 
       console.log(`Verification token for ${email}: ${verificationToken}`);
       await sendVerificationEmail(user, verificationToken);
 
+      await session.commitTransaction();
+      session.endSession();
       return res.status(200).json({ message: 'Please verify your email to complete registration.' });
     }
 
@@ -102,13 +119,13 @@ const register = async (req, res) => {
       // If the email is not verified, resend the verification email
       const verificationToken = crypto.randomBytes(32).toString('hex');
       user.verificationToken = verificationToken;
-      await user.save();
+      await user.save({ session });
       await sendVerificationEmail(user, verificationToken);
 
+      await session.commitTransaction();
+      session.endSession();
       return res.status(200).json({ message: 'A new verification email has been sent to your email address.' });
     }
-
-    
 
     // If already verified, generate meal plan and save it in the MealPlan table
     const mealPlanData = await sendUserDataToAI({
@@ -125,15 +142,24 @@ const register = async (req, res) => {
       duration: user.duration,
       plan: mealPlanData
     });
-    await mealPlan.save();
+    await mealPlan.save({ session });
 
     const token = auth.generateAuthToken(user);
+
+    await session.commitTransaction();
+    session.endSession();
     res.status(200).json({ message: 'Registration successful', mealPlan: mealPlanData, token });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error('Error registering user:', error);
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      return res.status(503).json({ error: 'Database operation timed out. Please try again later.' });
+    }
     res.status(500).json({ error: 'Failed to register user' });
   }
 };
+
 // Login User
 const login = async (req, res) => {
   try {
