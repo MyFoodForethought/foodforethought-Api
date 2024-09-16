@@ -3,42 +3,68 @@ const express = require('express');
 const MongoStore = require('connect-mongo');
 const session = require('express-session');
 const passport = require('passport');
-const { authRouter } = require('../Routes/route');
-const { connectDB, closeConnection, checkDatabaseHealth } = require('../config/db');
-const { dropUserCollection } = require('../models/user')
-require('../config/passport');
-const oauthRouter = require('../Routes/oauth');
+const { authRouter } = require('./Routes/route');
+const { connectDB, closeConnection, checkDatabaseHealth } = require('./config/db');
+require('./config/passport');
+const oauthRouter = require('./Routes/oauth');
 const winston = require('winston');
+const helmet = require('helmet');
+const rateLimit = require("express-rate-limit");
 
 // Initialize Winston logger
 const logger = winston.createLogger({
   level: 'info',
-  format: winston.format.simple(),
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
   transports: [
     new winston.transports.Console(),
     new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' })
   ],
 });
 
 const app = express();
 
+// Security middleware
+app.use(helmet());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
+
 // Middleware
 app.use(express.static('public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(require("cors")());
 
-// CORS headers
-app.use(function (req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-    next();
-});
+// CORS configuration
+const corsOptions = {
+  origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(require("cors")(corsOptions));
 
-// Request logging middleware
+// Enhanced logging middleware
 app.use((req, res, next) => {
-  logger.info(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  logger.info('Incoming request:', {
+    method: req.method,
+    url: req.url,
+    headers: req.headers,
+    body: req.body,
+    protocol: req.protocol,
+    secure: req.secure,
+    ip: req.ip,
+    xhr: req.xhr,
+    tls: req.client.authorized
+  });
   next();
 });
 
@@ -46,11 +72,15 @@ app.use((req, res, next) => {
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     store: MongoStore.create({
         mongoUrl: process.env.MONGO_URI
     }),
-    cookie: { secure: true} // Set secure: true if using HTTPS
+    cookie: { 
+      secure: true, // Always use secure cookies with Railway.app
+      httpOnly: true,
+      sameSite: 'strict'
+    }
 }));
 
 // Passport setup
@@ -58,8 +88,8 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Mount routes
-app.use('/api', authRouter);  // Mount authRouter under /api
-app.use('/oauth', oauthRouter); // Use OAuth routes
+app.use('/api', authRouter);
+app.use('/oauth', oauthRouter);
 
 // Root route
 app.get('/', (req, res) => {
@@ -83,35 +113,29 @@ app.get('/health', async (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  logger.error(err.stack);
-  res.status(500).send('Something went wrong!');
+  logger.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
 // Start the server
 const PORT = process.env.PORT || 3000;
-let server;
 
 async function startServer() {
     try {
-        await connectDB();  // Connect to MongoDB
-        // await dropUserCollection() // Uncomment if you need to drop the user collection
-        server = app.listen(PORT, () => {
-            logger.info(`Server is running on port ${PORT}`);
+        await connectDB();
+        
+        app.listen(PORT, () => {
+            logger.info(`Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
         });
     } catch (error) {
-        logger.error('Failed to connect to the database', error);
-        process.exit(1);  // Exit if DB connection fails
+        logger.error('Failed to start the server:', error);
+        process.exit(1);
     }
 }
 
 // Graceful shutdown
 async function gracefulShutdown(signal) {
   logger.info(`Received ${signal}. Shutting down gracefully.`);
-  if (server) {
-    server.close(() => {
-      logger.info('HTTP server closed.');
-    });
-  }
   
   try {
     await closeConnection();
@@ -136,7 +160,6 @@ process.on('uncaughtException', (error) => {
 // Unhandled rejection handler
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  gracefulShutdown('unhandledRejection');
 });
 
 startServer();

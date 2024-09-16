@@ -1,204 +1,167 @@
-// const axios = require('axios');
-// const { promisify } = require('util');
+// require("dotenv").config();
+// const express = require('express');
+// const MongoStore = require('connect-mongo');
+// const session = require('express-session');
+// const passport = require('passport');
+// const { authRouter } = require('./Routes/route');
+// const { connectDB, closeConnection, checkDatabaseHealth } = require('./config/db');
+// require('./config/passport');
+// const oauthRouter = require('./Routes/oauth');
+// const winston = require('winston');
+// const helmet = require('helmet');
+// const rateLimit = require("express-rate-limit");
 
-// const sendUserDataToAI = async ({ tribe, state, age, gender, duration, dislikedMeals }) => {
+// // Initialize Winston logger
+// const logger = winston.createLogger({
+//   level: 'info',
+//   format: winston.format.combine(
+//     winston.format.timestamp(),
+//     winston.format.json()
+//   ),
+//   transports: [
+//     new winston.transports.Console(),
+//     new winston.transports.File({ filename: 'error.log', level: 'error' }),
+//     new winston.transports.File({ filename: 'combined.log' })
+//   ],
+// });
+
+// const app = express();
+
+// // Security middleware
+// app.use(helmet());
+
+// // Rate limiting
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 100 // limit each IP to 100 requests per windowMs
+// });
+// app.use(limiter);
+
+// // Middleware
+// app.use(express.static('public'));
+// app.use(express.json());
+// app.use(express.urlencoded({ extended: true }));
+
+// // CORS configuration
+// const corsOptions = {
+//   origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+//   credentials: true,
+//   optionsSuccessStatus: 200
+// };
+// app.use(require("cors")(corsOptions));
+
+// // Enhanced logging middleware
+// app.use((req, res, next) => {
+//   logger.info('Incoming request:', {
+//     method: req.method,
+//     url: req.url,
+//     headers: req.headers,
+//     body: req.body,
+//     protocol: req.protocol,
+//     secure: req.secure,
+//     ip: req.ip,
+//     xhr: req.xhr,
+//     tls: req.client.authorized
+//   });
+//   next();
+// });
+
+// // Session setup
+// app.use(session({
+//     secret: process.env.SESSION_SECRET,
+//     resave: false,
+//     saveUninitialized: false,
+//     store: MongoStore.create({
+//         mongoUrl: process.env.MONGO_URI
+//     }),
+//     cookie: { 
+//       secure: true, // Always use secure cookies with Railway.app
+//       httpOnly: true,
+//       sameSite: 'strict'
+//     }
+// }));
+
+// // Passport setup
+// app.use(passport.initialize());
+// app.use(passport.session());
+
+// // Mount routes
+// app.use('/api', authRouter);
+// app.use('/oauth', oauthRouter);
+
+// // Root route
+// app.get('/', (req, res) => {
+//     res.send('OAuth authentication successful. You can now use the application.');
+// });
+
+// // Health check route
+// app.get('/health', async (req, res) => {
 //   try {
-//     const apiUrl = 'http://213.199.35.161/get_mealplan/';
-    
-//     const params = {
-//       tribe: String(tribe || ''),
-//       state: String(state || ''),
-//       age: Number(age || 0),
-//       gender: String(gender || ''),
-//       is_seven_days: duration === 'one week',
-//       disliked_meals: Array.isArray(dislikedMeals) ? dislikedMeals.join(',') : String(dislikedMeals || ''),
-//     };
-    
-//     console.log('Sending request to AI service with params:', params);
-    
-//     const timeoutPromise = promisify(setTimeout);
-    
-//     const response = await Promise.race([
-//       axios.get(apiUrl, {
-//         params,
-//         headers: {
-//           Authorization: `Bearer ${process.env.AI_API_TOKEN}`,
-//           Accept: 'application/json'
-//         },
-//         timeout: 30000 // 30 seconds timeout
-//       }),
-//       timeoutPromise(30000).then(() => {
-//         throw new Error('AI service request timed out');
-//       })
-//     ]);
-    
-//     console.log('Received response from AI service:', response.data);
-    
-//     return response.data;
-//   } catch (error) {
-//     console.error('Error in sendUserDataToAI:', error);
-    
-//     if (axios.isAxiosError(error)) {
-//       if (error.response) {
-//         console.error('AI service error response:', {
-//           status: error.response.status,
-//           data: error.response.data,
-//           headers: error.response.headers,
-//         });
-//       } else if (error.request) {
-//         console.error('No response received from AI service:', error.request);
-//       } else {
-//         console.error('Error setting up AI service request:', error.message);
-//       }
+//     const isDatabaseHealthy = await checkDatabaseHealth();
+//     if (isDatabaseHealthy) {
+//       res.status(200).json({ status: 'OK', database: 'Connected' });
 //     } else {
-//       console.error('Non-Axios error:', error.message);
+//       res.status(503).json({ status: 'Error', database: 'Disconnected' });
 //     }
-    
-//     throw new Error('Failed to generate meal plan');
-//   }
-// };
-
-// module.exports = { sendUserDataToAI };
-
-
-
-
-
-
-
-
-
-
-
-// const nodemailer = require('nodemailer');
-
-// let transporter;
-
-// const initializeTransporter = () => {
-//   if (!transporter) {
-//     transporter = nodemailer.createTransport({
-//       service: 'gmail',
-//       auth: {
-//         user: process.env.EMAIL,
-//         pass: process.env.PASSWORD
-//       }
-//     });
-//   }
-// };
-
-// const sendVerificationEmail = async (user, token) => {
-//   try {
-//     initializeTransporter();
-
-//     const verificationUrl = process.env.NODE_ENV === 'production'
-//       ? `https://foodforethought-api.onrender.com/api/verify-email?token=${token}`
-//       : `http://localhost:3000/api/verify-email?token=${token}`;
-
-//     const mailOptions = {
-//       from: process.env.EMAIL,
-//       to: user.email,
-//       subject: 'Please verify your email',
-//       text: `Hi ${user.fullName}, please verify your email by clicking on the following link: \n${verificationUrl}`,
-//       html: `
-//         <h1>Email Verification</h1>
-//         <p>Hi ${user.fullName},</p>
-//         <p>Please verify your email by clicking on the following link:</p>
-//         <a href="${verificationUrl}">Verify Email</a>
-//       `
-//     };
-
-//     const info = await transporter.sendMail(mailOptions);
-//     console.log('Verification email sent successfully:', info.messageId);
-//     return info;
 //   } catch (error) {
-//     console.error('Error sending verification email:', error);
-//     throw new Error('Failed to send verification email');
+//     logger.error('Health check failed:', error);
+//     res.status(500).json({ status: 'Error', message: 'Health check failed' });
 //   }
-// };
+// });
 
-// module.exports = { sendVerificationEmail };
+// // Error handling middleware
+// app.use((err, req, res, next) => {
+//   logger.error('Unhandled error:', err);
+//   res.status(500).json({ error: 'Internal Server Error' });
+// });
 
+// // Start the server
+// const PORT = process.env.PORT || 3000;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-// const verifyEmail = async (req, res) => {
-//     const session = await mongoose.startSession();
-//     session.startTransaction();
-  
+// async function startServer() {
 //     try {
-//       console.log('Starting email verification process');
-//       const { token } = req.query;
-  
-//       const user = await User.findOne({ verificationToken: token, isVerified: false }).session(session);
-  
-//       if (!user) {
-//         console.log('Invalid token or user already verified');
-//         await session.abortTransaction();
-//         session.endSession();
-//         return res.status(400).json({ error: 'Invalid token or already verified' });
-//       }
-  
-//       console.log('Updating user verification status');
-//       user.isVerified = true;
-//       user.verificationToken = undefined;
-//       await user.save({ session });
-  
-//       console.log('Generating meal plan');
-//       let mealPlanData;
-//       try {
-//         mealPlanData = await sendUserDataToAI({
-//           tribe: user.tribe,
-//           state: user.state,
-//           age: user.age,
-//           gender: user.gender,
-//           duration: user.duration,
-//           dislikedMeals: user.dislikedMeals
+//         await connectDB();
+        
+//         app.listen(PORT, () => {
+//             logger.info(`Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
 //         });
-//       } catch (aiError) {
-//         console.error('Error generating meal plan:', aiError);
-//         mealPlanData = null; // or a default meal plan
-//       }
-  
-//       console.log('Saving meal plan');
-//       const mealPlan = new MealPlan({
-//         userId: user._id,
-//         duration: user.duration,
-//         plan: mealPlanData
-//       });
-//       await mealPlan.save({ session });
-  
-//       console.log('Generating authentication token');
-//       const authToken = auth.generateAuthToken(user);
-  
-//       await session.commitTransaction();
-//       session.endSession();
-  
-//       console.log('Email verification process completed successfully');
-//       res.status(200).json({
-//         message: 'Email verified successfully',
-//         mealPlan: mealPlanData,
-//         token: authToken,
-//         userData: user
-//       });
 //     } catch (error) {
-//       console.error('Error in email verification process:', error);
-//       await session.abortTransaction();
-//       session.endSession();
-      
-//       if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
-//         return res.status(503).json({ error: 'Database operation timed out. Please try again later.' });
-//       }
-//       res.status(500).json({ error: 'Failed to verify email' });
+//         logger.error('Failed to start the server:', error);
+//         process.exit(1);
 //     }
-//   };
+// }
+
+// // Graceful shutdown
+// async function gracefulShutdown(signal) {
+//   logger.info(`Received ${signal}. Shutting down gracefully.`);
+  
+//   try {
+//     await closeConnection();
+//     logger.info('Database connection closed.');
+//     process.exit(0);
+//   } catch (err) {
+//     logger.error('Error during graceful shutdown:', err);
+//     process.exit(1);
+//   }
+// }
+
+// // Listen for termination signals
+// process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+// process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// // Uncaught exception handler
+// process.on('uncaughtException', (error) => {
+//   logger.error('Uncaught Exception:', error);
+//   gracefulShutdown('uncaughtException');
+// });
+
+// // Unhandled rejection handler
+// process.on('unhandledRejection', (reason, promise) => {
+//   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+// });
+
+// startServer();
+
+// module.exports = app; // For testing purposes
