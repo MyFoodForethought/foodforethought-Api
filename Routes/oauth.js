@@ -5,7 +5,8 @@ const router = express.Router();
 const oAuth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  'http://localhost:3000/oauth2callback' // Ensure this matches the redirect URI in your Google API Console
+  // 'http://localhost:3000/oauth2callback' 
+  'https://foodforethought.up.railway.app/oauth2callback'// Ensure this matches the redirect URI in your Google API Console
 );
 
 router.get('/oauth2callback', async (req, res) => {
