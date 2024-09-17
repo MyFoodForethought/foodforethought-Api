@@ -18,10 +18,9 @@ const sendVerificationEmail = async (user, token) => {
   try {
     initializeTransporter();
 
-    const verificationUrl = process.env.NODE_ENV === 'production'
-      ? `https://foodforethought-api.onrender.com/api/verify-email?token=${token}`
-      : `http://localhost:3000/api/verify-email?token=${token}`;
-
+     // Use BASE_URL from environment variables
+     const verificationUrl = `${process.env.BASE_URL}/api/verify-email?token=${token}`;
+     
     const mailOptions = {
       from: process.env.EMAIL,
       to: user.email,
