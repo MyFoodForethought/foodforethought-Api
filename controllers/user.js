@@ -18,6 +18,13 @@ const verifyEmail = async (req, res) => {
     console.log('Starting email verification process');
     const { token } = req.query;
 
+    if (!token) {
+      console.log('No token provided');
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ error: 'No token provided' });
+    }
+
     const user = await User.findOne({ verificationToken: token, isVerified: false }).session(session);
 
     if (!user) {
@@ -73,14 +80,13 @@ const verifyEmail = async (req, res) => {
     console.error('Error in email verification process:', error);
     await session.abortTransaction();
     session.endSession();
-    
+
     if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
       return res.status(503).json({ error: 'Database operation timed out. Please try again later.' });
     }
     res.status(500).json({ error: 'Failed to verify email' });
   }
 };
-
 
 // Register User
 const register = async (req, res) => {
