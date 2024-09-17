@@ -1,22 +1,15 @@
-// require("dotenv").config();
-// const express = require('express');
-// const MongoStore = require('connect-mongo');
-// const session = require('express-session');
-// const passport = require('passport');
-// const { authRouter } = require('./Routes/route');
-// const { connectDB, closeConnection, checkDatabaseHealth } = require('./config/db');
-// require('./config/passport');
-// const oauthRouter = require('./Routes/oauth');
+// const mongoose = require('mongoose');
 // const winston = require('winston');
-// const helmet = require('helmet');
-// const rateLimit = require("express-rate-limit");
+// require('dotenv').config();
 
 // // Initialize Winston logger
 // const logger = winston.createLogger({
 //   level: 'info',
 //   format: winston.format.combine(
 //     winston.format.timestamp(),
-//     winston.format.json()
+//     winston.format.printf(({ timestamp, level, message }) => {
+//       return `${timestamp} ${level}: ${message}`;
+//     })
 //   ),
 //   transports: [
 //     new winston.transports.Console(),
@@ -25,143 +18,64 @@
 //   ],
 // });
 
-// const app = express();
+// // Use environment variables for sensitive information
+// const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/yourdbname';
 
-// // Security middleware
-// app.use(helmet());
-
-// // Rate limiting
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 100 // limit each IP to 100 requests per windowMs
-// });
-// app.use(limiter);
-
-// // Middleware
-// app.use(express.static('public'));
-// app.use(express.json());
-// app.use(express.urlencoded({ extended: true }));
-
-// // CORS configuration
-// const corsOptions = {
-//   origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
-//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-//   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-//   credentials: true,
-//   optionsSuccessStatus: 200
-// };
-// app.use(require("cors")(corsOptions));
-
-// // Enhanced logging middleware
-// app.use((req, res, next) => {
-//   logger.info('Incoming request:', {
-//     method: req.method,
-//     url: req.url,
-//     headers: req.headers,
-//     body: req.body,
-//     protocol: req.protocol,
-//     secure: req.secure,
-//     ip: req.ip,
-//     xhr: req.xhr,
-//     tls: req.client.authorized
-//   });
-//   next();
-// });
-
-// // Session setup
-// app.use(session({
-//     secret: process.env.SESSION_SECRET,
-//     resave: false,
-//     saveUninitialized: false,
-//     store: MongoStore.create({
-//         mongoUrl: process.env.MONGO_URI
-//     }),
-//     cookie: { 
-//       secure: true, // Always use secure cookies with Railway.app
-//       httpOnly: true,
-//       sameSite: 'strict'
-//     }
-// }));
-
-// // Passport setup
-// app.use(passport.initialize());
-// app.use(passport.session());
-
-// // Mount routes
-// app.use('/api', authRouter);
-// app.use('/oauth', oauthRouter);
-
-// // Root route
-// app.get('/', (req, res) => {
-//     res.send('OAuth authentication successful. You can now use the application.');
-// });
-
-// // Health check route
-// app.get('/health', async (req, res) => {
-//   try {
-//     const isDatabaseHealthy = await checkDatabaseHealth();
-//     if (isDatabaseHealthy) {
-//       res.status(200).json({ status: 'OK', database: 'Connected' });
-//     } else {
-//       res.status(503).json({ status: 'Error', database: 'Disconnected' });
-//     }
-//   } catch (error) {
-//     logger.error('Health check failed:', error);
-//     res.status(500).json({ status: 'Error', message: 'Health check failed' });
-//   }
-// });
-
-// // Error handling middleware
-// app.use((err, req, res, next) => {
-//   logger.error('Unhandled error:', err);
-//   res.status(500).json({ error: 'Internal Server Error' });
-// });
-
-// // Start the server
-// const PORT = process.env.PORT || 3000;
-
-// async function startServer() {
+// const connectDB = async (maxRetries = 5, delay = 5000) => {
+//   for (let i = 0; i < maxRetries; i++) {
 //     try {
-//         await connectDB();
-        
-//         app.listen(PORT, () => {
-//             logger.info(`Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
-//         });
+//       await mongoose.connect(uri, {
+//         useNewUrlParser: true,
+//         useUnifiedTopology: true,
+//         serverSelectionTimeoutMS: 30000,
+//         socketTimeoutMS: 45000,
+//         family: 4, // Use IPv4, skip trying IPv6
+//       });
+
+//       logger.info("Successfully connected to MongoDB!");
+      
+//       // Set up connection monitoring
+//       mongoose.connection.on('error', err => {
+//         logger.error('MongoDB connection error:', err);
+//       });
+      
+//       mongoose.connection.on('disconnected', () => {
+//         logger.warn('MongoDB disconnected. Attempting to reconnect...');
+//         setTimeout(() => connectDB(maxRetries, delay), delay);
+//       });
+
+//       return mongoose.connection;
 //     } catch (error) {
-//         logger.error('Failed to start the server:', error);
-//         process.exit(1);
+//       logger.error(`Connection attempt ${i + 1} failed:`, error);
+//       if (i === maxRetries - 1) {
+//         logger.error('Failed to connect to MongoDB after maximum retries');
+//         throw error;
+//       }
+//       await new Promise(resolve => setTimeout(resolve, delay));
 //     }
-// }
-
-// // Graceful shutdown
-// async function gracefulShutdown(signal) {
-//   logger.info(`Received ${signal}. Shutting down gracefully.`);
-  
-//   try {
-//     await closeConnection();
-//     logger.info('Database connection closed.');
-//     process.exit(0);
-//   } catch (err) {
-//     logger.error('Error during graceful shutdown:', err);
-//     process.exit(1);
 //   }
-// }
+// };
 
-// // Listen for termination signals
-// process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-// process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+// // Graceful shutdown function
+// const closeConnection = async () => {
+//   try {
+//     await mongoose.connection.close();
+//     logger.info("MongoDB connection closed.");
+//   } catch (err) {
+//     logger.error("Error closing MongoDB connection:", err);
+//   }
+// };
 
-// // Uncaught exception handler
-// process.on('uncaughtException', (error) => {
-//   logger.error('Uncaught Exception:', error);
-//   gracefulShutdown('uncaughtException');
-// });
+// // Database health check function
+// const checkDatabaseHealth = async () => {
+//   try {
+//     await mongoose.connection.db.admin().ping();
+//     logger.info("Database health check: OK");
+//     return true;
+//   } catch (error) {
+//     logger.error("Database health check failed:", error);
+//     return false;
+//   }
+// };
 
-// // Unhandled rejection handler
-// process.on('unhandledRejection', (reason, promise) => {
-//   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-// });
-
-// startServer();
-
-// module.exports = app; // For testing purposes
+// module.exports = { connectDB, closeConnection, checkDatabaseHealth, logger };
