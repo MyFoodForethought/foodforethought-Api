@@ -16,7 +16,14 @@ const verifyEmail = async (req, res) => {
 
   try {
     console.log('Starting email verification process');
+
+    // Log the request query for debugging
+    console.log('Incoming request query:', req.query);
+
     const { token } = req.query;
+
+    // Log the token received
+    console.log(`Received token: ${token}`);
 
     if (!token) {
       console.log('No token provided');
@@ -25,7 +32,12 @@ const verifyEmail = async (req, res) => {
       return res.status(400).json({ error: 'No token provided' });
     }
 
+    // Log that we're looking for the user
+    console.log('Searching for user with token and unverified status...');
     const user = await User.findOne({ verificationToken: token, isVerified: false }).session(session);
+
+    // Log the result of the user search
+    console.log('User found:', user);
 
     if (!user) {
       console.log('Invalid token or user already verified');
@@ -37,9 +49,14 @@ const verifyEmail = async (req, res) => {
     console.log('Updating user verification status');
     user.isVerified = true;
     user.verificationToken = undefined;
-    await user.save({ session });
 
-    console.log('Generating meal plan');
+    // Log the user before saving to ensure the fields are correctly updated
+    console.log('User before saving:', user);
+    await user.save({ session });
+    console.log('User verification status updated successfully');
+
+    // Generate meal plan
+    console.log('Generating meal plan...');
     let mealPlanData;
     try {
       mealPlanData = await sendUserDataToAI({
@@ -50,26 +67,39 @@ const verifyEmail = async (req, res) => {
         duration: user.duration,
         dislikedMeals: user.dislikedMeals
       });
+      // Log the meal plan data returned from AI
+      console.log('Meal plan data from AI:', mealPlanData);
     } catch (aiError) {
       console.error('Error generating meal plan:', aiError);
-      mealPlanData = null; // or a default meal plan
+      mealPlanData = null; // Handle AI error with a default plan or null
     }
 
-    console.log('Saving meal plan');
+    console.log('Saving meal plan...');
     const mealPlan = new MealPlan({
       userId: user._id,
       duration: user.duration,
       plan: mealPlanData
     });
-    await mealPlan.save({ session });
 
-    console.log('Generating authentication token');
+    // Log the meal plan before saving
+    console.log('Meal plan to be saved:', mealPlan);
+    await mealPlan.save({ session });
+    console.log('Meal plan saved successfully');
+
+    // Generate authentication token
+    console.log('Generating authentication token...');
     const authToken = auth.generateAuthToken(user);
 
+    // Log the generated token
+    console.log('Auth token generated:', authToken);
+
+    // Commit the transaction
+    console.log('Committing transaction...');
     await session.commitTransaction();
     session.endSession();
+    console.log('Transaction committed successfully and session ended');
 
-    console.log('Email verification process completed successfully');
+    // Send the successful response
     res.status(200).json({
       message: 'Email verified successfully',
       mealPlan: mealPlanData,
@@ -78,8 +108,15 @@ const verifyEmail = async (req, res) => {
     });
   } catch (error) {
     console.error('Error in email verification process:', error);
+
+    // Abort the transaction if there's an error
+    console.log('Aborting transaction due to error...');
     await session.abortTransaction();
     session.endSession();
+    console.log('Transaction aborted and session ended');
+
+    // Log the full error stack
+    console.error('Full error stack:', error.stack);
 
     if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
       return res.status(503).json({ error: 'Database operation timed out. Please try again later.' });
@@ -87,6 +124,7 @@ const verifyEmail = async (req, res) => {
     res.status(500).json({ error: 'Failed to verify email' });
   }
 };
+
 
 // Register User
 const register = async (req, res) => {
