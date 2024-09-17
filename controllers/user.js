@@ -11,75 +11,55 @@ const auth = new Auth();
 
 // Verify Email
 const verifyEmail = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    console.log('Starting email verification process');
     const { token } = req.query;
 
-    const user = await User.findOne({ verificationToken: token, isVerified: false }).session(session);
+    const user = await User.findOne({ verificationToken: token, isVerified: false });
 
-    if (!user) {
-      console.log('Invalid token or user already verified');
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ error: 'Invalid token or already verified' });
-    }
+    if (!user) return res.status(400).json({ error: 'Invalid token or already verified' });
 
-    console.log('Updating user verification status');
+    // Mark the user as verified
     user.isVerified = true;
     user.verificationToken = undefined;
-    await user.save({ session });
+    await user.save();
 
-    console.log('Generating meal plan');
-    let mealPlanData;
-    try {
-      mealPlanData = await sendUserDataToAI({
-        tribe: user.tribe,
-        state: user.state,
-        age: user.age,
-        gender: user.gender,
-        duration: user.duration,
-        dislikedMeals: user.dislikedMeals
-      });
-    } catch (aiError) {
-      console.error('Error generating meal plan:', aiError);
-      mealPlanData = null; // or a default meal plan
-    }
 
-    console.log('Saving meal plan');
+    // Generate meal plan using AI service
+    const mealPlanData = await sendUserDataToAI({
+      tribe: user.tribe,
+      state: user.state,
+      age: user.age,
+      gender: user.gender,
+      duration: user.duration,
+      dislikedMeals: user.dislikedMeals
+    });
+    
+
+
+    // Save the meal plan in the MealPlan table
     const mealPlan = new MealPlan({
       userId: user._id,
       duration: user.duration,
       plan: mealPlanData
     });
-    await mealPlan.save({ session });
+    await mealPlan.save();
 
-    console.log('Generating authentication token');
+    // Generate authentication token
     const authToken = auth.generateAuthToken(user);
 
-    await session.commitTransaction();
-    session.endSession();
-
-    console.log('Email verification process completed successfully');
     res.status(200).json({
       message: 'Email verified successfully',
       mealPlan: mealPlanData,
       token: authToken,
-      userData: user
+      userData:user
     });
   } catch (error) {
-    console.error('Error in email verification process:', error);
-    await session.abortTransaction();
-    session.endSession();
-    
-    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
-      return res.status(503).json({ error: 'Database operation timed out. Please try again later.' });
-    }
+    console.error('Error verifying email:', error);
     res.status(500).json({ error: 'Failed to verify email' });
   }
 };
+
+
 // Register User
 const register = async (req, res) => {
   const session = await mongoose.startSession();
