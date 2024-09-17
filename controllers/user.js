@@ -11,10 +11,13 @@ const auth = new Auth();
 
 // Verify Email
 const verifyEmail = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
+  console.log('Entering verifyEmail function');
+  let session;
   try {
+    console.log('Starting MongoDB session');
+    session = await mongoose.startSession();
+    session.startTransaction();
+
     console.log('Starting email verification process');
 
     // Log the request query for debugging
@@ -110,10 +113,12 @@ const verifyEmail = async (req, res) => {
     console.error('Error in email verification process:', error);
 
     // Abort the transaction if there's an error
-    console.log('Aborting transaction due to error...');
-    await session.abortTransaction();
-    session.endSession();
-    console.log('Transaction aborted and session ended');
+    if (session) {
+      console.log('Aborting transaction due to error...');
+      await session.abortTransaction().catch(console.error);
+      session.endSession();
+      console.log('Transaction aborted and session ended');
+    }
 
     // Log the full error stack
     console.error('Full error stack:', error.stack);
@@ -124,7 +129,6 @@ const verifyEmail = async (req, res) => {
     res.status(500).json({ error: 'Failed to verify email' });
   }
 };
-
 
 // Register User
 const register = async (req, res) => {
