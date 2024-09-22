@@ -36,14 +36,14 @@ const logger = winston.createLogger({
 });
 
 // Use environment variables for sensitive information
-const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/yourdbname';
+const uri = process.env.MONGO_URI || process.env.MONGO_URI_LOCAL
 
 const connectDB = async (maxRetries = 5, delay = 5000) => {
   for (let i = 0; i < maxRetries; i++) {
     try {
       await mongoose.connect(uri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
+        // useNewUrlParser: true,
+        // useUnifiedTopology: true,
         serverSelectionTimeoutMS: 30000,
         socketTimeoutMS: 45000,
         family: 4, // Use IPv4, skip trying IPv6

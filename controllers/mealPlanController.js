@@ -1,7 +1,8 @@
 const {User} = require('../models/user');
-const MealPlan = require('../models/mealPlan');
+const {MealPlan} = require('../models/mealPlan');
 const { sendUserDataToAI } = require('../services/aiServices');
 const { Auth } = require('../middleware/auth');
+const jwt = require('jsonwebtoken');
 
 const auth = new Auth();
 
@@ -10,56 +11,83 @@ const generateMealPlan = async (req, res) => {
   const { duration, dislikedMeals, age, gender, tribe, state } = req.body;
 
   try {
-    if (req.user) {
-      // If the user is authenticated, track their free meal plans
-      const user = await User.findById(req.user._id);
+    let user = null;
 
-      if (user.freeMealPlans <= 0) {
-        return res.status(403).json({ error: 'Sign up required to generate more meal plans' });
+    // Extract the token from the Authorization header
+    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+
+    if (token) {
+      try {
+        // Verify and decode the token (safe decoding with verification)
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        const userEmail = decoded.email;
+
+        // Check if user exists
+        user = await User.findOne({ email: userEmail });
+
+        if (user) {
+          // User is authenticated, proceed with generating meal plan using stored user data
+          const aiResponse = await sendUserDataToAI({
+            tribe: user.tribe,      // Use stored or provided data
+            state: user.state,
+            age: user.age,
+            gender: user.gender,
+            dislikedMeals: user.dislikedMeals,
+            duration:user.duration,
+          });
+
+          // Save the generated meal plan to the MealPlan table
+          const mealPlan = new MealPlan({
+            userId: user._id, // Link meal plan to authenticated user
+            duration:user.duration,
+            plan: aiResponse,
+          });
+          await mealPlan.save();
+
+          // Return the meal plan and re-send the token (optional)
+          return res.status(200).json({ mealPlan, token });
+        }
+      } catch (err) {
+        // Token verification failed
+        console.error('Token verification error:', err);
+        return res.status(401).json({ error: 'Invalid or expired token' });
       }
-
-      // Decrement the freeMealPlans count
-      user.freeMealPlans -= 1;
-      await user.save();
-    } else {
-      // Track the number of free meal plans for non-authenticated users
-      const ip = req.ip; // Use IP to track non-authenticated users
-      const sessionMealPlans = req.session.mealPlans || 0;
-
-      if (sessionMealPlans >= 2) { // Updated limit to 2 trials
-        return res.status(403).json({ error: 'Sign up required to generate more meal plans' });
-      }
-
-      req.session.mealPlans = sessionMealPlans + 1;
     }
 
-    // Send user details to the AI service for meal plan generation
+    // Handle non-authenticated users: proceed with the free meal plan logic
+    const ip = req.ip; // Use IP to track non-authenticated users
+    const sessionMealPlans = req.session.mealPlans || 0;
+
+    if (sessionMealPlans >= 2) { // Limit to 2 free trials
+      return res.status(403).json({ error: 'Sign up required to generate more meal plans' });
+    }
+
+    // Increment the session meal plan count for the free user
+    req.session.mealPlans = sessionMealPlans + 1;
+
+    // Generate meal plan for non-authenticated user using provided data
     const aiResponse = await sendUserDataToAI({
-      duration,
-      dislikedMeals,
-      age,
-      gender,
       tribe,
       state,
+      age,
+      gender,
+      dislikedMeals,
+      duration,
     });
 
-    // Create a new meal plan document
+    // Save the generated meal plan without a user association
     const mealPlan = new MealPlan({
-      userId: req.user ? req.user._id : null, // Associate meal plan with the user if authenticated
+      userId: null, // No user associated for non-authenticated users
       duration,
       plan: aiResponse,
     });
-
     await mealPlan.save();
 
-    // Generate an authentication token if the user is authenticated
-    const token = req.user ? auth.generateAuthToken(req.user) : null;
-
-    // Respond with the generated meal plan and the token if available
-    res.json({ mealPlan, token });
+    // Return the generated meal plan for the non-authenticated user
+    return res.status(200).json({ mealPlan });
   } catch (error) {
     console.error('Error generating meal plan:', error);
-    res.status(500).json({ error: 'Failed to generate meal plan' });
+    return res.status(500).json({ error: 'Failed to generate meal plan' });
   }
 };
 
@@ -67,12 +95,15 @@ const generateMealPlan = async (req, res) => {
 // Function to retrieve past meal plans
 const getPastMealPlans = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
+    // The email is now directly in req.user
+    const userEmail = req.user;
+    
+    if (!userEmail) {
+      return res.status(400).json({ error: 'No email found in the token' });
     }
 
     // Find the user by email
-    const user = await User.findOne({ email: req.user.email });
+    const user = await User.findOne({ email: userEmail });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

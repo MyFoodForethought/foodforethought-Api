@@ -10,6 +10,36 @@ const oauthRouter = require('../Routes/oauth');
 const winston = require('winston');
 const helmet = require('helmet');
 const rateLimit = require("express-rate-limit");
+const swaggerJsDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+const {dropUserCollection} = require('../models/user')
+const {dropMealCollection} = require('../models/mealPlan')
+
+
+
+
+// Swagger options
+const options = {
+  swaggerDefinition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'FoodForThought API',
+      version: '1.0.0',
+      description: 'API documentation for the FoodForThought application',
+    },
+    servers: [
+      {
+        url: process.env.NODE_ENV === 'production' ? process.env.BASE_URL : process.env.BASE_URL_LOCAL,
+      },
+    ],
+  },
+  apis: ['./routes/*.js'], // Path to your route files
+};
+
+
+
+
+
 
 // Initialize Winston logger
 const logger = winston.createLogger({
@@ -110,6 +140,9 @@ app.get('/health', async (req, res) => {
     res.status(500).json({ status: 'Error', message: 'Health check failed' });
   }
 });
+const swaggerSpec = swaggerJsDoc(options);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -123,9 +156,12 @@ const PORT = process.env.PORT || 3000;
 
 
 
+
 async function startServer() {
     try {
         await connectDB();
+        // await dropUserCollection()
+        // await dropMealCollection()
         
         app.listen(PORT, () => {
             logger.info(`Server is running on port ${PORT} in ${process.env.NODE_ENV} mode`);
@@ -135,6 +171,10 @@ async function startServer() {
         process.exit(1);
     }
 }
+
+// if (process.env.NODE_ENV === 'test') {
+//   PORT = 3002; // or any other available port
+// }
 
 // Graceful shutdown
 async function gracefulShutdown(signal) {

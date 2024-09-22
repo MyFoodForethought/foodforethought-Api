@@ -38,7 +38,7 @@ const updateUserSchema = Joi.object({
   height: Joi.number().optional(),
   age: Joi.number().optional(),
   dietaryNeeds: Joi.string().optional(),
-  dislikedMeals: Joi.array().items(Joi.string()).optional(),
+  dislikedMeals: Joi.string().required(),
   duration: Joi.string().valid('one week', 'two weeks').optional(),
   tribe: Joi.string().optional(),
   state: Joi.string().optional(),

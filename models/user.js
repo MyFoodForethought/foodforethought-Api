@@ -20,7 +20,8 @@ const userSchema = new Schema({
   height: { type: Number },
   age: { type: Number }, // Integer for age
   dietaryNeeds: { type: String },
-  duration: { type: String, enum: ['one week', 'two weeks']},
+  // duration: { type: String, enum: ['one week', 'two weeks']},
+  duration: { type: String},
   dislikedMeals: { type: String },
   tribe: { type: String }, // String for tribe
   state: { type: String }, // String for state
