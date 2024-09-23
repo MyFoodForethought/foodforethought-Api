@@ -67,12 +67,13 @@ const transporter = nodemailer.createTransport({
 const sendVerificationEmail = async (user, token) => {
   try {
    
-    const verificationUrl = `https://foodforethought-api-production.up.railway.app/api/verify-login?token=${token}`;
+    const verificationUrl = `https://foodforethought-api-production.up.railway.app/api/verify-email?token=${token}`;
     const mailOptions = {
             from: process.env.EMAIL,
             to: user.email,
             subject: 'Email Verification.',
             text: `Hi ${user.fullName}, please verify your email by clicking on the following link: \n${verificationUrl}`,
+            // text: `Hi ${user.fullName}, please verify your email by clicking on the following link: \nhttp://localhost:3000/api/verify-email?token=${token}`,
             html: `
               <h1>Email Verification</h1>
               <p>Hi ${user.fullName},</p>
@@ -90,6 +91,13 @@ const sendVerificationEmail = async (user, token) => {
     throw new Error('Failed to send verification email');
   }
 };
+
+
+
+
+
+
+
 
 const loginTransporter = nodemailer.createTransport({
   service: 'gmail',

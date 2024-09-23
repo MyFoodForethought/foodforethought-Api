@@ -13,55 +13,50 @@ const auth = new Auth();
 // Verify Email
 const verifyEmail = async (req, res) => {
   let session;
+
   try {
     session = await mongoose.startSession();
     session.startTransaction();
 
-    const { token } = req.query;
+    const token = req.query.token.trim(); // Just trimming whitespace
+    console.log("Incoming Token: ", token); // Log incoming token
 
-    // Log the token to verify its presence and structure
-    console.log("Received Token: ", token);
-
-    if (!token) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ error: 'No token provided' });
-    }
-
-    // Attempt to verify the token
-    let decoded;
-    try {
-      decoded = auth.verifyAuthToken(token); // Ensure this is properly implemented
-    } catch (err) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ error: 'Invalid or expired token' });
-    }
-
-    // Find the user with the decoded ID and check if they're unverified
-    const user = await User.findOne({ _id: decoded.id, isVerified: false }).session(session);
-
+    const user = await User.findOne({ verificationToken: token, isVerified: false }).session(session);
+    
     if (!user) {
+      console.log("User not found or token mismatch.");
       await session.abortTransaction();
       session.endSession();
-      return res.status(400).json({ error: 'Invalid token or user already verified' });
+      return res.status(400).json({ error: 'Invalid token or already verified' });
     }
 
-    // Mark the user as verified and clear the verification token
+    console.log("Stored Token for User: ", user.verificationToken); // Log stored token
+
+    // Proceed to verify the user
     user.isVerified = true;
-    user.verificationToken = undefined;
+    user.verificationToken = undefined; // Clear the token
 
-    await user.save({ session });
+    try {
+      await user.save({ session });
+    } catch (saveError) {
+      console.error('Error saving user:', saveError);
+      throw saveError;
+    }
 
-    // Generate meal plan (if necessary) and issue new JWT token
-    const mealPlanData = await sendUserDataToAI({
-      tribe: user.tribe,
-      state: user.state,
-      age: user.age,
-      gender: user.gender,
-      duration: user.duration,
-      dislikedMeals: user.dislikedMeals
-    });
+    let mealPlanData;
+    try {
+      mealPlanData = await sendUserDataToAI({
+        tribe: user.tribe,
+        state: user.state,
+        age: user.age,
+        gender: user.gender,
+        duration: user.duration,
+        dislikedMeals: user.dislikedMeals
+      });
+    } catch (aiError) {
+      console.error('Error sending user data to AI:', aiError);
+      throw aiError; // Propagate the error to be caught in the main try-catch block
+    }
 
     const mealPlan = new MealPlan({
       userId: user._id,
@@ -69,9 +64,15 @@ const verifyEmail = async (req, res) => {
       plan: mealPlanData
     });
 
-    await mealPlan.save({ session });
+    try {
+      await mealPlan.save({ session });
+      console.log('Meal plan saved successfully');
+    } catch (mealPlanError) {
+      console.error('Error saving meal plan:', mealPlanError);
+      throw mealPlanError;
+    }
 
-    // Generate auth token for the user
+    const auth = new Auth();
     const authToken = auth.generateAuthToken(user);
 
     await session.commitTransaction();
@@ -96,10 +97,20 @@ const verifyEmail = async (req, res) => {
       session.endSession();
     }
 
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      console.log('Database operation timed out');
+      return res.status(503).json({ error: 'Database operation timed out. Please try again later.' });
+    }
+
+    // More specific error handling
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: 'Validation error', details: error.message });
+    }
+
+    console.log('Sending error response');
     res.status(500).json({ error: 'Failed to verify email', details: error.message });
   }
 };
-
 
 // Register User
 const register = async (req, res) => {

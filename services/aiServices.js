@@ -87,7 +87,7 @@ const sendUserDataToAI = async ({ tribe, state, age, gender, duration, dislikedM
         Authorization: `Bearer ${process.env.AI_API_TOKEN}`,
         Accept: 'application/json'
       },
-      timeout: 60000
+      timeout: 120000
     });
     
     console.log('Received response from AI service:', response.data);
