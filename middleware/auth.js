@@ -32,6 +32,7 @@ class Auth {
       // Verify the token
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decodedToken) => {
         if (err) {
+          console.error('Token Verification Error:', err);
           return res.status(403).json({
             status: false,
             error: utils.getMessage('INVALID_TOKEN_ERROR'), // Custom error message for invalid token
@@ -44,6 +45,7 @@ class Auth {
           req.user = decodedToken.email; // Attach the email from the decoded token to req.user
           next(); // Proceed to the next middleware
         } else {
+          console.log('Invalid Decoded Token:', decodedToken);
           return res.sendStatus(403); // Token not valid
         }
       });
@@ -51,6 +53,7 @@ class Auth {
       console.log('authHeader:', authHeader); // For debugging
       console.log('token:', token);           // For debugging
     } catch (err) {
+      console.error('Unexpected Error in Token Verification:', err);
       return res.status(500).json({
         status: false,
         error: utils.getMessage('INTERNAL_SERVER_ERROR'), // Custom error message for server errors
