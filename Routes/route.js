@@ -7,7 +7,7 @@ const { validate, registerSchema, loginSchema, generateMealPlanSchema, updateUse
 const auth = new Auth();
 
 
-/*
+/**
  * @swagger
  * /api/login/user:
  *   post:
@@ -155,7 +155,7 @@ authRouter.get("/google/callback", userAuth.googleCallback);
 authRouter.post("/get/generate-meal-plans", validate(generateMealPlanSchema), mealPlans.generateMealPlan);
 /**
  * @swagger
- * /get/past-plans:
+ * /api/get/past-plans:
  *   get:
  *     summary: Get past meal plans
  *     tags: [Meal Plans]

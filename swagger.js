@@ -16,11 +16,11 @@ const options = {
     },
     servers: [
       {
-        url: 'https://foodforethought-api-production.up.railway.app',
+        url: 'https://foodforethought-api-production.up.railway.app/api',
       },
     ],
   },
-  apis: [path.join(__dirname, 'Routes', '*.js')], // Path to the API docs
+  apis: [path.join(__dirname, 'Routes', '*.js')] // Path to the API docs
 };
 
 // Initialize swagger-jsdoc
@@ -37,6 +37,8 @@ app.get('/api/test', (req, res) => {
 // Start the server
 const PORT = process.env.PORT;
 
+
 app.listen(PORT, () => {
   console.log(`Server is running on https://foodforethought-api-production.up.railway.app:${PORT}`);
+  console.log(`Swagger documentation available at https://foodforethought-api-production.up.railway.app:${PORT}/api-docs`);
 });
