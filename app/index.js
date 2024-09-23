@@ -141,6 +141,7 @@ app.get('/health', async (req, res) => {
   }
 });
 const swaggerSpec = swaggerJsDoc(options);
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 

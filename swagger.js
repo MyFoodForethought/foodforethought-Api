@@ -15,7 +15,7 @@ const options = {
     },
     servers: [
       {
-        url: process.env.NODE_ENV === 'production' ? process.env.BASE_URL : process.env.BASE_URL_LOCAL,
+        url: process.env.BASE_URL,
       },
     ],
   },
@@ -34,8 +34,8 @@ app.get('/api/test', (req, res) => {
 });
 
 // Start the server
-const PORT = process.env.PORT_LOCAL || process.env.PORT;
+const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on https://foodforethought-api-production.up.railway.app:${PORT}`);
 });
