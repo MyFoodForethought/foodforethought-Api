@@ -20,7 +20,7 @@ const options = {
       },
     ],
   },
-  apis: [path.join(__dirname, 'Routes', 'route.js')], // Path to the API docs
+  apis: [path.join(__dirname, 'Routes', '*.js')], // Path to the API docs
 };
 
 // Initialize swagger-jsdoc
