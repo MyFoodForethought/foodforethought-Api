@@ -33,7 +33,7 @@ const options = {
       },
     ],
   },
-  apis: ['../Routes/route.js'], // Path to your route files
+  apis: [`${__dirname}/Routes/route.js`],// Path to your route files
 };
 
 
