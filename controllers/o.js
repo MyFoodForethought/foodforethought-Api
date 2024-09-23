@@ -185,3 +185,35 @@
 //         "gender": "male"
 //     }
 // }
+
+// google login
+// https://foodforethought-api-production.up.railway.app/api/auth/google (get)
+// redirects to callback url - https://foodforethought-api-production.up.railway.app/api/google/callback
+// res body - {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im15Zm9vZGZvcmV0aG91Z2h0QGdtYWlsLmNvbSIsImlhdCI6MTcyNzEwMTUxMX0.tUCaO4g7v9cMSaOW7N5STMNkUjq5fbF6rx6KYBq_6lQ","user":{"email":"myfoodforethought@gmail.com","fullName":"ifeanyi nwogu","profilePicture":null},"mealPlan":{"_id":"66f171296b810602079aff66","userId":"66f12640b25e4291f3ef7fab","duration":"two weeks","plan":{"meal_plan":{"days":[1,2,3,4,5,6,7,8,9,10,11,12,13,14],"meals":[[{"meal_name":"Yam and Egg Sauce","food_category":"Breakfast","calories_meal_intake":350,"meal_measure_gram":300,"human_equivalent_alternative_measure":"2 medium yams and 2 eggs"},{"meal_name":"Efo Riro with Pounded Yam","food_category":"Lunch","calories_meal_intake":600,"meal_measure_gram":400,"human_equivalent_alternative_measure":"1 cup of pounded yam and 1 cup of Efo Riro"},{"meal_name":"Grilled Chicken with Vegetable Salad","food_category":"Dinner","calories_meal_intake":400,"meal_measure_gram":350,"human_equivalent_alternative_measure":"1 chicken breast and 1 bowl of salad"}],[{"meal_name":"Akara and Pap","food_category":"Breakfast","calories_meal_intake":300,"meal_measure_gram":250,"human_equivalent_alternative_measure":"10 pieces of Akara and 1 cup of Pap"},
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

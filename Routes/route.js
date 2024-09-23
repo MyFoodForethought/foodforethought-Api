@@ -31,8 +31,6 @@ const auth = new Auth();
  *         description: Unauthorized
  */
 
-
-
 authRouter.post("/login/user", validate(loginSchema), userAuth.login);
 
 
@@ -118,7 +116,6 @@ authRouter.get("/verify-login", userAuth.verifyLogin);
  *       200:
  *         description: Redirects to Google login
  */
-
 authRouter.get("/auth/google", userAuth.googleLogin);
 /**
  * @swagger

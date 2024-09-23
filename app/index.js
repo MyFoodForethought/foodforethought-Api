@@ -29,7 +29,7 @@ const options = {
     },
     servers: [
       {
-        url: process.env.NODE_ENV === 'production' ? process.env.BASE_URL : process.env.BASE_URL_LOCAL,
+        url: process.env.BASE_URL,
       },
     ],
   },
