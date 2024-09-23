@@ -29,11 +29,11 @@ const options = {
     },
     servers: [
       {
-        url: process.env.BASE_URL,
+        url: 'https://foodforethought-api-production.up.railway.app',
       },
     ],
   },
-  apis: ['./routes/*.js'], // Path to your route files
+  apis: ['../Routes/route.js'], // Path to your route files
 };
 
 

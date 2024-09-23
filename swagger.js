@@ -15,11 +15,11 @@ const options = {
     },
     servers: [
       {
-        url: process.env.BASE_URL,
+        url: 'https://foodforethought-api-production.up.railway.app',
       },
     ],
   },
-  apis: ['./routes/*.js'], // Path to the API docs
+  apis: ['../Routes/route.js'], // Path to the API docs
 };
 
 // Initialize swagger-jsdoc
