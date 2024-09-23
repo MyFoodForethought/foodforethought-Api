@@ -12,6 +12,18 @@ const auth = new Auth();
 
 // Verify Email
 const verifyEmail = async (req, res) => {
+
+  console.log('Headers:', req.headers);
+  const authHeader = req.headers['authorization'];
+  console.log('Authorization Header:', authHeader);
+
+  if (!authHeader) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  console.log('Extracted Token:', token);
+
   
   let session;
   
