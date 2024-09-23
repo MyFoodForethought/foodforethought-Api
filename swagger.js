@@ -16,7 +16,7 @@ const options = {
     },
     servers: [
       {
-        url: 'https://foodforethought-api-production.up.railway.app',
+        url: 'https://foodforethought-api-production.up.railway.app/api',
       },
     ],
   },
