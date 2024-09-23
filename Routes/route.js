@@ -7,7 +7,7 @@ const { validate, registerSchema, loginSchema, generateMealPlanSchema, updateUse
 const auth = new Auth();
 
 
-/**
+/*
  * @swagger
  * /api/login/user:
  *   post:

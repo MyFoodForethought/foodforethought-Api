@@ -1,214 +1,217 @@
-const express = require("express");
-const authRouter = express.Router();
-const { Auth } = require("../middleware/auth");
-const userAuth = require("../controllers/user");
-const mealPlans = require("../controllers/mealPlanController");
-const { validate, registerSchema, loginSchema, generateMealPlanSchema, updateUserSchema } = require("../middleware/val");
-const auth = new Auth();
+const verifyEmail = async (req, res) => {
+  let session;
+  console.log('Starting email verification process');
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+    console.log('Transaction started');
 
-/**
- * @swagger
- * /api/reg/user:
- *   post:
- *     summary: Register a new user
- *     tags: [User]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               fullName:
- *                 type: string
- *               email:
- *                 type: string
- *               weight:
- *                 type: number
- *               height:
- *                 type: number
- *               age:
- *                 type: number
- *               dietaryNeeds:
- *                 type: string
- *               duration:
- *                 type: string
- *               dislikedMeals:
- *                 type: string
- *               tribe:
- *                 type: string
- *               state:
- *                 type: string
- *               gender:
- *                 type: string
- *     responses:
- *       200:
- *         description: Verification email sent
- *       400:
- *         description: Bad request
- */
-authRouter.post("/reg/user", validate(registerSchema), userAuth.register);
+    const { token } = req.query;
+    console.log(`Received token: ${token}`);
 
-/**
- * @swagger
- * /api/login/user:
- *   post:
- *     summary: Login a user
- *     tags: [User]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *               fullName:
- *                 type: string
- *     responses:
- *       200:
- *         description: Login successful
- *       401:
- *         description: Unauthorized
- */
-authRouter.post("/login/user", validate(loginSchema), userAuth.login);
+    if (!token) {
+      console.log('No token provided');
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ error: 'No token provided' });
+    }
 
-/**
- * @swagger
- * /api/verify-email:
- *   get:
- *     summary: Verify user email
- *     tags: [User]
- *     responses:
- *       200:
- *         description: Registration successful
- *       400:
- *         description: Invalid token
- */
-authRouter.get("/verify-email", userAuth.verifyEmail);
+    const user = await User.findOne({ verificationToken: token, isVerified: false }).session(session);
+    console.log(`User found: ${user ? user._id : 'No user found'}`);
 
-/**
- * @swagger
- * /api/verify-login:
- *   get:
- *     summary: Verify login token
- *     tags: [User]
- *     responses:
- *       200:
- *         description: Login successful
- *       401:
- *         description: Unauthorized
- */
-authRouter.get("/verify-login", userAuth.verifyLogin);
+    if (!user) {
+      console.log('Invalid token or already verified');
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ error: 'Invalid token or already verified' });
+    }
 
-// Google OAuth routes
-/**
- * @swagger
- * /api/auth/google:
- *   get:
- *     summary: Authenticate using Google
- *     tags: [User]
- *     responses:
- *       200:
- *         description: Redirects to Google login
- */
-authRouter.get("/auth/google", userAuth.googleLogin);
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    console.log('Updating user verification status');
 
-/**
- * @swagger
- * /api/google/callback:
- *   get:
- *     summary: Google OAuth callback
- *     tags: [User]
- *     responses:
- *       200:
- *         description: Google login callback successful
- */
-authRouter.get("/google/callback", userAuth.googleCallback);
+    try {
+      await user.save({ session });
+      console.log('User saved successfully');
+    } catch (saveError) {
+      console.error('Error saving user:', saveError);
+      throw saveError;
+    }
 
-/**
- * @swagger
- * /api/get/generate-meal-plans:
- *   post:
- *     summary: Generate meal plans
- *     tags: [Meal Plans]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               duration:
- *                 type: string
- *               dislikedMeals:
- *                 type: string
- *     responses:
- *       200:
- *         description: Meal plans generated successfully
- *       400:
- *         description: Bad request
- */
-authRouter.post("/get/generate-meal-plans", validate(generateMealPlanSchema), mealPlans.generateMealPlan);
+    let mealPlanData;
+    try {
+      console.log('Sending user data to AI');
+      mealPlanData = await sendUserDataToAI({
+        tribe: user.tribe,
+        state: user.state,
+        age: user.age,
+        gender: user.gender,
+        duration: user.duration,
+        dislikedMeals: user.dislikedMeals
+      });
+      console.log('Received meal plan data from AI');
+    } catch (aiError) {
+      console.error('Error getting meal plan from AI:', aiError);
+      throw aiError; // Propagate the error to be caught in the main try-catch block
+    }
 
-/**
- * @swagger
- * /api/get/past-plans:
- *   get:
- *     summary: Get past meal plans
- *     tags: [Meal Plans]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Past meal plans retrieved
- *       401:
- *         description: Unauthorized
- */
-authRouter.get("/get/past-plans", auth.tokenRequired, mealPlans.getPastMealPlans);
+    const mealPlan = new MealPlan({
+      userId: user._id,
+      duration: user.duration,
+      plan: mealPlanData
+    });
 
-/**
- * @swagger
- * /api/update/user:
- *   put:
- *     summary: Update user information
- *     tags: [User]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               fullName:
- *                 type: string
- *               email:
- *                 type: string
- *               weight:
- *                 type: number
- *               height:
- *                 type: number
- *               age:
- *                 type: number
- *               dietaryNeeds:
- *                 type: string
- *               tribe:
- *                 type: string
- *               state:
- *                 type: string
- *               gender:
- *                 type: string
- *     responses:
- *       200:
- *         description: User information updated successfully
- *       401:
- *         description: Unauthorized
- */
-authRouter.put('/update/user', auth.tokenRequired, validate(updateUserSchema), userAuth.editUser);
+    console.log('Saving meal plan');
+    try {
+      await mealPlan.save({ session });
+      console.log('Meal plan saved successfully');
+    } catch (mealPlanError) {
+      console.error('Error saving meal plan:', mealPlanError);
+      throw mealPlanError;
+    }
 
-module.exports = {
-  authRouter,
+    console.log('Generating auth token');
+    const authToken = auth.generateAuthToken(user);
+
+    await session.commitTransaction();
+    session.endSession();
+    console.log('Transaction committed successfully');
+
+    console.log('Sending successful response');
+    res.status(200).json({
+      message: 'Email verified successfully',
+      mealPlan: mealPlanData,
+      token: authToken,
+      userData: user
+    });
+  } catch (error) {
+    console.error('Error in email verification:', error);
+
+    if (session) {
+      try {
+        await session.abortTransaction();
+        console.log('Transaction aborted');
+      } catch (abortError) {
+        console.error('Error aborting transaction:', abortError);
+      }
+      session.endSession();
+    }
+
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      console.log('Database operation timed out');
+      return res.status(503).json({ error: 'Database operation timed out. Please try again later.' });
+    }
+
+    // More specific error handling
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: 'Validation error', details: error.message });
+    }
+
+    console.log('Sending error response');
+    res.status(500).json({ error: 'Failed to verify email', details: error.message });
+  }
+};
+
+
+
+
+const register = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    console.log('Starting user registration process');
+    const { fullName, email, weight, height, age, dietaryNeeds, dislikedMeals, duration, tribe, state, gender } = req.body;
+
+    console.log('Validating required fields');
+    if (!fullName || !email || !weight || !height || !age || !dietaryNeeds || !duration || !tribe || !state || !gender) {
+      console.log('Missing required fields');
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    console.log(`Checking if user with email ${email} already exists`);
+    let user = await User.findOne({ email }).session(session);
+
+    if (!user) {
+      console.log('Creating new user');
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      user = new User({
+        fullName,
+        email,
+        weight,
+        height,
+        age,
+        dietaryNeeds,
+        dislikedMeals,
+        duration,
+        tribe,
+        state,
+        gender,
+        verificationToken,
+      });
+      await user.save({ session });
+      
+      console.log('Sending verification email');
+      await sendVerificationEmail(user, verificationToken);
+
+      await session.commitTransaction();
+      session.endSession();
+      console.log('Registration successful, verification email sent');
+      return res.status(200).json({ message: 'Please verify your email to complete registration.' });
+    }
+
+    if (!user.isVerified) {
+      console.log('User exists but not verified, resending verification email');
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      user.verificationToken = verificationToken;
+      await user.save({ session });
+      await sendVerificationEmail(user, verificationToken);
+
+      await session.commitTransaction();
+      session.endSession();
+      console.log('New verification email sent');
+      return res.status(200).json({ message: 'A new verification email has been sent to your email address.' });
+    }
+
+    console.log('User already verified, generating meal plan');
+    const mealPlanData = await sendUserDataToAI({
+      tribe: user.tribe,
+      state: user.state,
+      age: user.age,
+      gender: user.gender,
+      duration: user.duration,
+      dislikedMeals: user.dislikedMeals
+    });
+
+    console.log('Saving meal plan');
+    const mealPlan = new MealPlan({
+      userId: user._id,
+      duration: user.duration,
+      plan: mealPlanData
+    });
+    await mealPlan.save({ session });
+
+    console.log('Generating auth token');
+    const token = auth.generateAuthToken(user);
+
+    await session.commitTransaction();
+    session.endSession();
+    console.log('Registration process completed successfully');
+    res.status(200).json({ message: 'Registration successful', mealPlan: mealPlanData, token });
+  } catch (error) {
+    console.error('Error in user registration:', error);
+    await session.abortTransaction();
+    session.endSession();
+    
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      console.log('Database operation timed out');
+      return res.status(503).json({ error: 'Database operation timed out. Please try again later.' });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: 'Validation error', details: error.message });
+    }
+    res.status(500).json({ error: 'Failed to register user', details: error.message });
+  }
 };
