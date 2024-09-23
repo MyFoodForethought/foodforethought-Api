@@ -34,7 +34,7 @@ const options = {
       },
     ],
   },
-  apis: [path.join(__dirname, 'Routes', '*.js')], // Path to your route files
+  apis: ['./Routes/*.js']  // Path to your route files
 };
 
 
