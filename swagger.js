@@ -13,6 +13,10 @@ const options = {
       title: 'FoodForThought API',
       version: '1.0.0',
       description: 'API documentation for the FoodForThought application',
+      contact:{
+        name:"foodforethough",
+        email:"myfoodforethought@gmail.com"
+      }
     },
     servers: [
       {
