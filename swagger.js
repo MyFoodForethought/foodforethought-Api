@@ -14,7 +14,7 @@ const options = {
       version: '1.0.0',
       description: 'API documentation for the FoodForThought application',
       contact:{
-        name:"foodforethough",
+        name:"foodforethought",
         email:"myfoodforethought@gmail.com"
       }
     },
