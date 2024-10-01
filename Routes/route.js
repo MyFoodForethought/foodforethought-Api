@@ -210,6 +210,8 @@ authRouter.get("/get/past-plans", auth.tokenRequired, mealPlans.getPastMealPlans
  */
 authRouter.put('/update/user', auth.tokenRequired, validate(updateUserSchema), userAuth.editUser);
 
+authRouter.get("/user-profile", auth.tokenRequired, userAuth.getUserProfile);
+
 module.exports = {
   authRouter,
 };
