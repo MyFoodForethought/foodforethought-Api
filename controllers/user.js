@@ -78,12 +78,18 @@ const verifyEmail = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    res.status(200).json({
-      message: 'Email verified successfully',
-      mealPlan: mealPlanData,
-      token: authToken,
-      userData: user
-    });
+    // res.status(200).json({
+    //   message: 'Email verified successfully',
+    //   mealPlan: mealPlanData,
+    //   token: authToken,
+    //   userData: user
+    // });
+
+    // Redirect to the frontend success URL, passing the auth token and optionally other details
+    const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/register/success?token=${authToken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+    
+    // Perform the redirection
+    return res.redirect(redirectUrl);
   } catch (error) {
     console.error('Error in email verification:', error);
 
@@ -326,15 +332,19 @@ const googleCallback = (req, res) => {
       console.log(`User logged in with Google: ${email}`);
 
       // Return user data, token, and past meal plans
-      return res.status(200).json({
-        token,
-        user: {
-          email: user.email,
-          fullName: user.fullName,
-          profilePicture: user.profilePicture
-        },
-        mealPlan: mealPlan || null // If no meal plan exists, return null
-      });
+      // return res.status(200).json({
+      //   token,
+      //   user: {
+      //     email: user.email,
+      //     fullName: user.fullName,
+      //     profilePicture: user.profilePicture
+      //   },
+      //   mealPlan: mealPlan || null // If no meal plan exists, return null
+      // });
+      const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/register/success?token=${token}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+    
+      // Perform the redirection
+      return res.redirect(redirectUrl);
     } catch (error) {
       console.error('Error during Google login:', error);
       return res.status(500).json({ error: 'Failed to process Google login' });
@@ -366,13 +376,19 @@ const verifyLogin = async (req, res) => {
     const mealPlan = await MealPlan.findOne({ userId: user._id }).sort({ createdAt: -1 });
     const authtoken = auth.generateAuthToken(user);
 
-    // Return the user details and meal plans
-    return res.status(200).json({
-      authtoken,
-      message: 'Login successful',
-      user,
-      mealPlan,
-    });
+    // // Return the user details and meal plans
+    // return res.status(200).json({
+    //   authtoken,
+    //   message: 'Login successful',
+    //   user,
+    //   mealPlan,
+    // });
+
+    // Redirect to the frontend success URL, passing the auth token and optionally other details
+    const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/register/success?token=${authtoken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+    
+    // Perform the redirection
+    return res.redirect(redirectUrl);
 
   } catch (error) {
     console.error('Token verification failed:', error);  // Log the error for debugging
