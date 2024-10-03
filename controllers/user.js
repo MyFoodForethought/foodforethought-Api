@@ -160,7 +160,7 @@ const register = async (req, res) => {
 
       await session.commitTransaction();
       console.log('Registration successful, verification email sent');
-      return res.status(200).json({ message: 'Please verify your email to complete registration.' });
+      return res.status(200).json({ message: 'Please verify your email to complete registration.', token:verificationToken});
     }
 
     if (!user.isVerified) {
@@ -263,7 +263,7 @@ const login = async (req, res) => {
       console.log('Verification email sent to:', user.email);
 
       // Inform user to check their email
-      return res.status(200).json({ message: 'Verification email sent. Please check your email to log in.' });
+      return res.status(200).json({ message: 'Verification email sent. Please check your email to log in.' , token:verificationToken});
   } catch (error) {
       console.error('Error during login process:', error);
       return res.status(500).json({ error: 'Error during login process' });
