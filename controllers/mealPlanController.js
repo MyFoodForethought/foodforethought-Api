@@ -1,5 +1,6 @@
 const {User} = require('../models/user');
 const {MealPlan} = require('../models/mealPlan');
+const { sendMealPlanNotification } = require('../services/emailService');
 const { sendUserDataToAI } = require('../services/aiServices');
 const { Auth } = require('../middleware/auth');
 const jwt = require('jsonwebtoken');
@@ -15,34 +16,68 @@ const generateMealPlan = async (req, res) => {
 
     // Extract the token from the Authorization header
     const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+    
 
     if (token) {
       try {
-        // Verify and decode the token (safe decoding with verification)
+        // Verify and decode the token
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
         const userEmail = decoded.email;
 
-        // Check if user exists
-        user = await User.findOne({ email: userEmail });
+        
 
+
+        // Find the user in the database
+        user = await User.findOne({ email: userEmail });
+        
         if (user) {
-          // User is authenticated, proceed with generating meal plan using stored user data
+          // Check if we need to update user details
+          const updates = {};
+          if (!user.age && age) updates.age = age;
+          if (!user.gender && gender) updates.gender = gender;
+          if (!user.tribe && tribe) updates.tribe = tribe;
+          if (!user.state && state) updates.state = state;
+          if (!user.dislikedMeals && dislikedMeals) updates.dislikedMeals = dislikedMeals;
+          if (!user.duration && duration) updates.duration = duration;
+
+          // Update user details if any changes are required
+          if (Object.keys(updates).length > 0) {
+            user = await User.findOneAndUpdate(
+              { email: userEmail },
+              { $set: updates },
+              { new: true } // Return the updated user
+            );
+            
+          }
+
+          // Use either the updated data or the provided values
+          const userTribe = user.tribe || tribe;
+          const userState = user.state || state;
+          const userAge = user.age || age;
+          const userGender = user.gender || gender;
+          const userDislikedMeals = user.dislikedMeals || dislikedMeals;
+          const userDuration = user.duration || duration;
+
+          // Send data to AI service
           const aiResponse = await sendUserDataToAI({
-            tribe: user.tribe,      // Use stored or provided data
-            state: user.state,
-            age: user.age,
-            gender: user.gender,
-            dislikedMeals: user.dislikedMeals,
-            duration:user.duration,
+            tribe: userTribe,
+            state: userState,
+            age: userAge,
+            gender: userGender,
+            dislikedMeals: userDislikedMeals,
+            duration: userDuration,
           });
 
           // Save the generated meal plan to the MealPlan table
           const mealPlan = new MealPlan({
             userId: user._id, // Link meal plan to authenticated user
-            duration:user.duration,
+            duration: userDuration,
             plan: aiResponse,
           });
           await mealPlan.save();
+
+           // Send meal plan notification email
+           await sendMealPlanNotification(user);
 
           // Return the meal plan and re-send the token (optional)
           return res.status(200).json({ mealPlan, token });

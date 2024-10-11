@@ -211,6 +211,9 @@ authRouter.get("/get/past-plans", auth.tokenRequired, mealPlans.getPastMealPlans
 authRouter.put('/update/user', auth.tokenRequired, validate(updateUserSchema), userAuth.editUser);
 
 authRouter.get("/user-profile", auth.tokenRequired, userAuth.getUserProfile);
+authRouter.put("/update-disliked-meals", auth.tokenRequired, userAuth.updateDislikedMeals);
+authRouter.delete("/delete-account", auth.tokenRequired, userAuth.deleteAccount);
+
 
 module.exports = {
   authRouter,

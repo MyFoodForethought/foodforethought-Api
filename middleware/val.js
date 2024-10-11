@@ -4,15 +4,15 @@ const Joi = require('joi');
 const registerSchema = Joi.object({
   fullName: Joi.string().required(),
   email: Joi.string().email().required(),
-  weight: Joi.number().required(),
-  height: Joi.number().required(),
-  age: Joi.number().required(),
-  dietaryNeeds: Joi.string().required(),
-  dislikedMeals: Joi.string().required(),
-  duration: Joi.string().valid('one week', 'two weeks').required(),
-  tribe: Joi.string().required(),
-  state: Joi.string().required(),
-  gender: Joi.string().valid('male', 'female', 'other').required()
+  // weight: Joi.number().required(),
+  // height: Joi.number().required(),
+  // age: Joi.number().required(),
+  // dietaryNeeds: Joi.string().required(),
+  // dislikedMeals: Joi.string().required(),
+  // duration: Joi.string().valid('one week', 'two weeks').required(),
+  // tribe: Joi.string().required(),
+  // state: Joi.string().required(),
+  // gender: Joi.string().valid('male', 'female', 'other').required()
 });
 
 // Validation schema for user login

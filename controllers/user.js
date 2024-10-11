@@ -43,34 +43,34 @@ const verifyEmail = async (req, res) => {
       throw saveError;
     }
 
-    let mealPlanData;
-    try {
-      mealPlanData = await sendUserDataToAI({
-        tribe: user.tribe,
-        state: user.state,
-        age: user.age,
-        gender: user.gender,
-        duration: user.duration,
-        dislikedMeals: user.dislikedMeals
-      });
-    } catch (aiError) {
-      console.error('Error sending user data to AI:', aiError);
-      throw aiError; // Propagate the error to be caught in the main try-catch block
-    }
+    // let mealPlanData;
+    // try {
+    //   mealPlanData = await sendUserDataToAI({
+    //     tribe: user.tribe,
+    //     state: user.state,
+    //     age: user.age,
+    //     gender: user.gender,
+    //     duration: user.duration,
+    //     dislikedMeals: user.dislikedMeals
+    //   });
+    // } catch (aiError) {
+    //   console.error('Error sending user data to AI:', aiError);
+    //   throw aiError; // Propagate the error to be caught in the main try-catch block
+    // }
 
-    const mealPlan = new MealPlan({
-      userId: user._id,
-      duration: user.duration,
-      plan: mealPlanData
-    });
+    // const mealPlan = new MealPlan({
+    //   userId: user._id,
+    //   duration: user.duration,
+    //   plan: mealPlanData
+    // });
 
-    try {
-      await mealPlan.save({ session });
-      console.log('Meal plan saved successfully');
-    } catch (mealPlanError) {
-      console.error('Error saving meal plan:', mealPlanError);
-      throw mealPlanError;
-    }
+    // try {
+    //   await mealPlan.save({ session });
+    //   console.log('Meal plan saved successfully');
+    // } catch (mealPlanError) {
+    //   console.error('Error saving meal plan:', mealPlanError);
+    //   throw mealPlanError;
+    // }
 
     const auth = new Auth();
     const authToken = auth.generateAuthToken(user);
@@ -80,7 +80,6 @@ const verifyEmail = async (req, res) => {
 
     // res.status(200).json({
     //   message: 'Email verified successfully',
-    //   mealPlan: mealPlanData,
     //   token: authToken,
     //   userData: user
     // });
@@ -126,13 +125,8 @@ const register = async (req, res) => {
     session.startTransaction();
 
     console.log('Starting user registration process');
-    const { fullName, email, weight, height, age, dietaryNeeds, dislikedMeals, duration, tribe, state, gender } = req.body;
-
-    console.log('Validating required fields');
-    if (!fullName || !email || !weight || !height || !age || !dietaryNeeds || !duration || !tribe || !state || !gender) {
-      console.log('Missing required fields');
-      return res.status(400).json({ error: 'All fields are required' });
-    }
+    // const { fullName, email, weight, height, age, dietaryNeeds, dislikedMeals, duration, tribe, state, gender } = req.body;
+    const { fullName, email } = req.body;
 
     console.log(`Checking if user with email ${email} already exists`);
     let user = await User.findOne({ email }).session(session);
@@ -148,15 +142,6 @@ const register = async (req, res) => {
       user = new User({
         fullName,
         email,
-        weight,
-        height,
-        age,
-        dietaryNeeds,
-        dislikedMeals,
-        duration,
-        tribe,
-        state,
-        gender,
         verificationToken,  // Attach the generated token to the new user
       });
       await user.save({ session });
@@ -187,30 +172,30 @@ const register = async (req, res) => {
       return res.status(200).json({ message: 'A new verification email has been sent to your email address.' });
     }
 
-    console.log('User already verified, generating meal plan');
-    const mealPlanData = await sendUserDataToAI({
-      tribe: user.tribe,
-      state: user.state,
-      age: user.age,
-      gender: user.gender,
-      duration: user.duration,
-      dislikedMeals: user.dislikedMeals
-    });
+    // console.log('User already verified, generating meal plan');
+    // const mealPlanData = await sendUserDataToAI({
+    //   tribe: user.tribe,
+    //   state: user.state,
+    //   age: user.age,
+    //   gender: user.gender,
+    //   duration: user.duration,
+    //   dislikedMeals: user.dislikedMeals
+    // });
 
-    console.log('Saving meal plan');
-    const mealPlan = new MealPlan({
-      userId: user._id,
-      duration: user.duration,
-      plan: mealPlanData
-    });
-    await mealPlan.save({ session });
+    // console.log('Saving meal plan');
+    // const mealPlan = new MealPlan({
+    //   userId: user._id,
+    //   duration: user.duration,
+    //   plan: mealPlanData
+    // });
+    // await mealPlan.save({ session });
 
     console.log('Generating auth token');
     const token = auth.generateAuthToken(user);
 
     await session.commitTransaction();
     console.log('Registration process completed successfully');
-    res.status(200).json({ message: 'Registration successful', mealPlan: mealPlanData, token });
+    res.status(200).json({ message: 'Registration successful', token });
     
   } catch (error) {
     console.error('Error in user registration:', error);
@@ -491,4 +476,107 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyEmail, verifyLogin, login, googleLogin, googleCallback, editUser, getUserProfile  };
+
+const updateDislikedMeals = async (req, res) => {
+  try {
+    // The email is now directly in req.user
+    const userEmail = req.user; // Ensure req.user contains the email extracted from the token
+    
+    if (!userEmail) {
+      return res.status(400).json({ error: 'No email found in the token' });
+    }
+
+    // Find the user by email
+    const user = await User.findOne({ email: userEmail });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Extract dislikedMeals from request body
+    const { dislikedMeals } = req.body;
+
+    if (!dislikedMeals) {
+      return res.status(400).json({ error: 'No disliked meals provided' });
+    }
+
+    console.log('Updating disliked meals to:', dislikedMeals);
+
+    // Update dislikedMeals field
+    user.dislikedMeals = dislikedMeals;
+
+    // Save the updated user
+    await user.save();
+
+    console.log('Disliked meals updated successfully');
+
+    res.status(200).json({
+      message: 'Disliked meals updated successfully',
+      dislikedMeals: user.dislikedMeals // Return the updated disliked meals
+    });
+  } catch (error) {
+    console.error('Error in updateDislikedMeals:', error);
+    res.status(500).json({ error: 'Failed to update disliked meals', details: error.message });
+  }
+};
+
+
+const deleteAccount = async (req, res) => {
+  // Extract the token from the Authorization header
+  const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+
+  if (token) {
+      try {
+          // Verify and decode the token
+          const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+          const userEmail = decoded.email; // Extract the email
+
+          console.log('Delete account request received for email:', userEmail);
+
+          if (!userEmail) {
+              return res.status(400).json({ error: 'Email is required' });
+          }
+
+          let session;
+          try {
+              session = await mongoose.startSession();
+              session.startTransaction();
+
+              // Find the user in the database using the extracted email
+              const user = await User.findOne({ email: userEmail });
+
+              if (!user) {
+                  console.log('User not found for the given email:', userEmail);
+                  await session.abortTransaction();
+                  return res.status(404).json({ error: 'User not found' });
+              }
+
+              // Optionally, delete associated meal plans
+              await MealPlan.deleteMany({ userId: user._id }).session(session);
+
+              // Delete the user account
+              await User.deleteOne({ email: userEmail }).session(session);
+
+              await session.commitTransaction();
+              console.log('User account deleted successfully for email:', userEmail);
+              return res.status(200).json({ message: 'Account deleted successfully' });
+          } catch (error) {
+              console.error('Error deleting account:', error);
+              if (session) {
+                  await session.abortTransaction();
+              }
+              return res.status(500).json({ error: 'Failed to delete account', details: error.message });
+          } finally {
+              if (session) {
+                  session.endSession();
+              }
+          }
+      } catch (err) {
+          return res.status(401).json({ error: 'Unauthorized', details: err.message });
+      }
+  } else {
+      return res.status(403).json({ error: 'No token provided' });
+  }
+};
+
+module.exports = { register, verifyEmail, verifyLogin, login, googleLogin, googleCallback, editUser, getUserProfile, updateDislikedMeals, deleteAccount  };
