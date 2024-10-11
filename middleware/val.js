@@ -24,7 +24,7 @@ const loginSchema = Joi.object({
 // Validation schema for generating meal plans
 const generateMealPlanSchema = Joi.object({
   duration: Joi.string().valid('one week', 'two weeks').required(),
-  dislikedMeals: Joi.string().required(),
+  dislikedMeals: Joi.string().optional(),
   age: Joi.number().required(),
   gender: Joi.string().valid('male', 'female', 'other').required(),
   tribe: Joi.string().required(),
