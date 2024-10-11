@@ -326,7 +326,7 @@ const googleCallback = (req, res) => {
       //   },
       //   mealPlan: mealPlan || null // If no meal plan exists, return null
       // });
-      const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/register/success?token=${token}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+      const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${token}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
     
       // Perform the redirection
       return res.redirect(redirectUrl);
@@ -370,7 +370,7 @@ const verifyLogin = async (req, res) => {
     // });
 
     // Redirect to the frontend success URL, passing the auth token and optionally other details
-    const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/register/success?token=${authtoken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+    const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${authtoken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
     
     // Perform the redirection
     return res.redirect(redirectUrl);
