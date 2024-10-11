@@ -85,7 +85,7 @@ const verifyEmail = async (req, res) => {
     // });
 
     // Redirect to the frontend success URL, passing the auth token and optionally other details
-    const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/register/success?token=${authToken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+    const redirectUrl = `https://foodforethougt-frontend.onrender.com/dashboard/home?token=${authToken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
     
     // Perform the redirection
     return res.redirect(redirectUrl);
