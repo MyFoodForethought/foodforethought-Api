@@ -85,7 +85,7 @@ const verifyEmail = async (req, res) => {
     // });
 
     // Redirect to the frontend success URL, passing the auth token and optionally other details
-    const redirectUrl = `https://foodforethougt-frontend.onrender.com/dashboard/home?token=${authToken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+    const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${authToken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
     
     // Perform the redirection
     return res.redirect(redirectUrl);
@@ -358,7 +358,7 @@ const verifyLogin = async (req, res) => {
     }
 
     // Fetch the user's past meal plans
-    const mealPlan = await MealPlan.findOne({ userId: user._id }).sort({ createdAt: -1 });
+    // const mealPlan = await MealPlan.findOne({ userId: user._id }).sort({ createdAt: -1 });
     const authtoken = auth.generateAuthToken(user);
 
     // // Return the user details and meal plans

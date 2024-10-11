@@ -213,6 +213,9 @@ authRouter.put('/update/user', auth.tokenRequired, validate(updateUserSchema), u
 authRouter.get("/user-profile", auth.tokenRequired, userAuth.getUserProfile);
 authRouter.put("/update-disliked-meals", auth.tokenRequired, userAuth.updateDislikedMeals);
 authRouter.delete("/delete-account", auth.tokenRequired, userAuth.deleteAccount);
+authRouter.get('/mealplans/:mealPlanId', mealPlans.getMealPlanById);
+authRouter.delete('/deleteplan/:mealPlanId', mealPlans.deleteMealPlanById);
+
 
 
 module.exports = {
