@@ -184,7 +184,7 @@ const register = async (req, res) => {
 
       await session.commitTransaction();
       console.log('New verification email sent');
-      return res.status(200).json({ message: 'A new verification email has been sent to your email address.' });
+      return res.status(200).json({ message: 'A new verification email has been sent to your email address.', token:verificationToken });
     }
 
     console.log('User already verified, generating meal plan');
