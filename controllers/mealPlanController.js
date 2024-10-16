@@ -177,6 +177,59 @@ const getMealPlanById = async (req, res) => {
   }
 };
 
+
+const editUserMealDetails = async (req, res) => {
+  const { duration, dislikedMeals, age, gender, tribe, state } = req.body;
+
+  try {
+    // Extract the token from the Authorization header
+    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication token required' });
+    }
+
+    // Verify the token to get user information
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const userEmail = decoded.email;
+
+    // Find the user by their email
+    const user = await User.findOne({ email: userEmail });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prepare the updates object, only updating the fields that are provided
+    const updates = {};
+    if (age !== undefined) updates.age = age;
+    if (gender !== undefined) updates.gender = gender;
+    if (tribe !== undefined) updates.tribe = tribe;
+    if (state !== undefined) updates.state = state;
+    if (dislikedMeals !== undefined) updates.dislikedMeals = dislikedMeals;
+    if (duration !== undefined) updates.duration = duration;
+
+    // Check if any fields are being updated
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No details provided to update' });
+    }
+
+    // Update the user in the database
+    const updatedUser = await User.findOneAndUpdate(
+      { email: userEmail },
+      { $set: updates },
+      { new: true } // Return the updated document
+    );
+
+    // Return the updated user details
+    return res.status(200).json({ message: 'User meal details updated successfully', user: updatedUser });
+  } catch (error) {
+    console.error('Error updating user meal details:', error);
+    return res.status(500).json({ error: 'Failed to update user meal details' });
+  }
+};
+
+
 // Function to delete a meal plan by mealPlanId
 const deleteMealPlanById = async (req, res) => {
   try {
@@ -205,4 +258,4 @@ const deleteMealPlanById = async (req, res) => {
 
 
 
-module.exports = { generateMealPlan, getPastMealPlans, getMealPlanById, deleteMealPlanById };
+module.exports = { generateMealPlan, getPastMealPlans, getMealPlanById, deleteMealPlanById, editUserMealDetails };

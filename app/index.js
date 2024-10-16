@@ -195,9 +195,7 @@ async function startServer() {
     }
 }
 
-// if (process.env.NODE_ENV === 'test') {
-//   PORT = 3002; // or any other available port
-// }
+
 
 // Graceful shutdown
 async function gracefulShutdown(signal) {

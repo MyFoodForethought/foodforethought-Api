@@ -214,6 +214,7 @@ authRouter.get("/user-profile", auth.tokenRequired, userAuth.getUserProfile);
 authRouter.put("/update-disliked-meals", auth.tokenRequired, userAuth.updateDislikedMeals);
 authRouter.delete("/delete-account", auth.tokenRequired, userAuth.deleteAccount);
 authRouter.get('/mealplans/:mealPlanId', mealPlans.getMealPlanById);
+authRouter.put('/update-plan-details', auth.tokenRequired, mealPlans.editUserMealDetails)
 authRouter.delete('/deleteplan/:mealPlanId', mealPlans.deleteMealPlanById);
 
 
