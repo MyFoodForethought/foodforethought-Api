@@ -579,4 +579,45 @@ const deleteAccount = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyEmail, verifyLogin, login, googleLogin, googleCallback, editUser, getUserProfile, updateDislikedMeals, deleteAccount  };
+
+
+// Generate Token for User
+const generateToken = async (req, res) => {
+  const { userId } = req.body;
+
+  console.log('Token generation request received for userId:', userId);
+
+  try {
+      // Ensure the userId is provided
+      if (!userId) {
+          console.log('User ID is missing in the request.');
+          return res.status(400).json({ message: 'User ID is required' });
+      }
+
+      // Find the user (assuming User model exists)
+      const user = await User.findById(userId);
+      
+      console.log('User lookup result:', user);
+
+      if (!user) {
+          // If user doesn't exist, return an error
+          console.log('User not found.');
+          return res.status(404).json({ message: 'User not found.' });
+      }
+
+      // Generate an API token (JWT or similar)
+      const token = auth.generateAuthToken(user);
+      console.log('Generated API token:', token);
+
+      // Return the token to the client
+      return res.status(200).json({ message: 'Token generated successfully.', token });
+  } catch (error) {
+      console.error('Error during token generation process:', error);
+      return res.status(500).json({ error: 'Error during token generation process' });
+  }
+};
+
+
+
+
+module.exports = { register, verifyEmail, verifyLogin, login, googleLogin, googleCallback, generateToken, editUser, getUserProfile, updateDislikedMeals, deleteAccount  };
