@@ -217,7 +217,7 @@ authRouter.get('/mealplans/:mealPlanId', mealPlans.getMealPlanById);
 authRouter.put('/update-plan-details', auth.tokenRequired, mealPlans.editUserMealDetails)
 authRouter.delete('/deleteplan/:mealPlanId', mealPlans.deleteMealPlanById);
 authRouter.post('/generate-token', userAuth.generateToken);
-
+authRouter.put('/mealplans-edit/:mealPlanId', auth.tokenRequired, mealPlans.editMealPlanById);
 
 
 module.exports = {
