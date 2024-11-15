@@ -18,15 +18,11 @@ const generateMealPlan = async (req, res) => {
     // Extract the token from the Authorization header
     const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
     
-
     if (token) {
       try {
         // Verify and decode the token
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
         const userEmail = decoded.email;
-
-        
-
 
         // Find the user in the database
         user = await User.findOne({ email: userEmail });
@@ -48,7 +44,6 @@ const generateMealPlan = async (req, res) => {
               { $set: updates },
               { new: true } // Return the updated user
             );
-            
           }
 
           // Use either the updated data or the provided values
@@ -77,8 +72,8 @@ const generateMealPlan = async (req, res) => {
           });
           await mealPlan.save();
 
-           // Send meal plan notification email
-           await sendMealPlanNotification(user);
+          // Send meal plan notification email
+          await sendMealPlanNotification(user);
 
           // Return the meal plan and re-send the token (optional)
           return res.status(200).json({ mealPlan, token });
@@ -127,7 +122,6 @@ const generateMealPlan = async (req, res) => {
   }
 };
 
-
 // Function to retrieve past meal plans
 const getPastMealPlans = async (req, res) => {
   try {
@@ -154,8 +148,6 @@ const getPastMealPlans = async (req, res) => {
   }
 };
 
-
-
 const getMealPlanById = async (req, res) => {
   try {
     // Get mealPlanId from the request parameters
@@ -176,7 +168,6 @@ const getMealPlanById = async (req, res) => {
     return res.status(500).json({ error: 'Failed to retrieve meal plan' });
   }
 };
-
 
 const editUserMealDetails = async (req, res) => {
   const { duration, dislikedMeals, age, gender, tribe, state } = req.body;
@@ -229,7 +220,6 @@ const editUserMealDetails = async (req, res) => {
   }
 };
 
-
 // Function to delete a meal plan by mealPlanId
 const deleteMealPlanById = async (req, res) => {
   try {
@@ -256,16 +246,10 @@ const deleteMealPlanById = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
 // Function to edit a meal plan by mealPlanId
 const editMealPlanById = async (req, res) => {
   const { mealPlanId } = req.params;
-  const { duration, plan, userId, createdAt } = req.body; // Include all relevant fields
+  const { duration, plan, userId, createdAt } = req.body;
 
   try {
     // Validate that the mealPlanId is a valid ObjectId
@@ -277,8 +261,8 @@ const editMealPlanById = async (req, res) => {
     const updates = {};
     if (duration !== undefined) updates.duration = duration;
     if (plan !== undefined) updates.plan = plan;
-    if (userId !== undefined) updates.userId = userId; // Allow updating userId if needed
-    if (createdAt !== undefined) updates.createdAt = createdAt; // Allow updating createdAt if needed
+    if (userId !== undefined) updates.userId = userId;
+    if (createdAt !== undefined) updates.createdAt = createdAt;
 
     // Check if any fields are being updated
     if (Object.keys(updates).length === 0) {
@@ -304,7 +288,5 @@ const editMealPlanById = async (req, res) => {
     return res.status(500).json({ error: 'Failed to update meal plan' });
   }
 };
-
-
 
 module.exports = { generateMealPlan, getPastMealPlans, getMealPlanById, deleteMealPlanById, editUserMealDetails, editMealPlanById };

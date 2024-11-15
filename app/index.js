@@ -86,8 +86,11 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
+      // 'http://localhost:3000',
+      // 'https://foodforethougt-frontend.onrender.com'
       'http://localhost:3000',
-      'https://foodforethougt-frontend.onrender.com'
+      'https://foodforethought-frontend.onrender.com',  // corrected spelling
+      'https://foodforthought-frontend.onrender.com'  
     ];
 
     if (allowedOrigins.includes(origin)) {
