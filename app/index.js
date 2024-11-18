@@ -74,36 +74,28 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // CORS configuration
-// const corsOptions = {
-//   origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
-//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-//   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-//   credentials: true,
-//   optionsSuccessStatus: 200
-// };
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://foodforethougt-frontend.onrender.com',
+  'https://foodforethought-frontend.onrender.com',  
+  'https://foodforthought-frontend.onrender.com',
+  'https://foodforethought-api-production.up.railway.app',
+  'https://accounts.google.com'
+];
+
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      // 'http://localhost:3000',
-      'https://foodforethougt-frontend.onrender.com',
-      'http://localhost:3000',
-      'https://foodforethought-frontend.onrender.com',  // corrected spelling
-      'https://foodforthought-frontend.onrender.com',
-      'https://foodforethought-api-production.up.railway.app'  
-    ];
-
-    if (allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.log('Blocked origin:', origin); // Helpful for debugging
       callback(new Error('Not allowed by CORS'));
     }
   },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-  credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200 // Added for legacy browser support
 };
 
 app.use(require("cors")(corsOptions));
