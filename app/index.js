@@ -80,7 +80,9 @@ const allowedOrigins = [
   'https://foodforethought-frontend.onrender.com',  
   'https://foodforthought-frontend.onrender.com',
   'https://foodforethought-api-production.up.railway.app',
-  'https://accounts.google.com'
+  'https://accounts.google.com',
+   'https://foodforethought-api-production.up.railway.app/api/auth/google',
+  'https://foodforethought-api-production.up.railway.app/api/google/callback'
 ];
 
 const corsOptions = {
@@ -127,7 +129,8 @@ app.use(session({
     cookie: { 
       secure: true, // Always use secure cookies with Railway.app
       httpOnly: true,
-      sameSite: 'strict'
+      sameSite: 'none',
+      domain: 'foodforethought-api-production.up.railway.app'
     }
 }));
 
