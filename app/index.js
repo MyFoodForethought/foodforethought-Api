@@ -57,6 +57,7 @@ const logger = winston.createLogger({
 });
 
 const app = express();
+app.use(require("cors")(corsOptions));
 
 // Security middleware
 app.use(helmet());
@@ -86,21 +87,22 @@ const allowedOrigins = [
 ];
 
 const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log('Blocked origin:', origin); // Helpful for debugging
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  // origin: (origin, callback) => {
+  //   if (!origin || allowedOrigins.includes(origin)) {
+  //     callback(null, true);
+  //   } else {
+  //     console.log('Blocked origin:', origin); // Helpful for debugging
+  //     callback(new Error('Not allowed by CORS'));
+  //   }
+  // },
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
   optionsSuccessStatus: 200 // Added for legacy browser support
 };
 
-app.use(require("cors")(corsOptions));
+
 
 // Enhanced logging middleware
 app.use((req, res, next) => {
@@ -130,7 +132,7 @@ app.use(session({
       secure: true, // Always use secure cookies with Railway.app
       httpOnly: true,
       sameSite: 'none',
-      domain: 'foodforethought-api-production.up.railway.app'
+      // domain: 'foodforethought-api-production.up.railway.app'
     }
 }));
 
