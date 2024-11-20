@@ -57,7 +57,7 @@ const logger = winston.createLogger({
 });
 
 const app = express();
-app.use(require("cors")(corsOptions));
+
 
 // Security middleware
 app.use(helmet());
@@ -103,6 +103,7 @@ const corsOptions = {
 };
 
 
+app.use(require("cors")(corsOptions));
 
 // Enhanced logging middleware
 app.use((req, res, next) => {
