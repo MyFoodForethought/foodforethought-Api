@@ -132,7 +132,7 @@ app.use(session({
       secure: true, // Always use secure cookies with Railway.app
       httpOnly: true,
       sameSite: 'none',
-      // domain: 'foodforethought-api-production.up.railway.app'
+      domain: 'foodforethought-api-production.up.railway.app'
     }
 }));
 
