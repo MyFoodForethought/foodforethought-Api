@@ -396,7 +396,7 @@ const login = async (req, res) => {
 
 
 
-
+const googleLogin = passport.authenticate('google', { scope: ['profile', 'email'] });
 const googleCallback = (req, res) => {
   passport.authenticate('google', async (err, googleUser) => {
     if (err) {
