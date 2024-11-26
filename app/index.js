@@ -78,6 +78,7 @@ app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [
   'http://localhost:3000',
   'https://foodforethougt-frontend.onrender.com',
+  'https://foodforethougt-frontend.onrender.com/',
   'https://foodforethought-frontend.onrender.com',  
   'https://foodforthought-frontend.onrender.com',
   'https://foodforethought-api-production.up.railway.app',

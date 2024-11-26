@@ -265,8 +265,137 @@ const login = async (req, res) => {
 
 
 
-// Google Login
-const googleLogin = passport.authenticate('google', { scope: ['profile', 'email'] });
+// // Google Login
+// const googleLogin = passport.authenticate('google', { scope: ['profile', 'email'] });
+
+// const googleCallback = (req, res) => {
+//   passport.authenticate('google', async (err, googleUser) => {
+//     if (err) {
+//       console.error('Google authentication error:', err);
+//       return res.status(500).json({ error: 'Failed to authenticate with Google' });
+//     }
+
+//     if (!googleUser) {
+//       console.error('Google authentication failed: No user returned');
+//       return res.status(400).json({ error: 'Google authentication failed' });
+//     }
+
+//     try {
+//       const email = googleUser.email || null;
+//       const displayName = googleUser.displayName || '';
+//       const profilePicture = googleUser.photos && googleUser.photos.length > 0 ? googleUser.photos[0].value : null;
+
+//       if (!email) {
+//         console.error('Unable to retrieve email from Google profile');
+//         return res.status(400).json({ error: 'Unable to retrieve email from Google profile' });
+//       }
+
+//       // Find the user by email
+//       let user = await User.findOne({ email });
+
+//       if (!user) {
+//         // If user doesn't exist, create a new user in the database
+//         user = new User({
+//           email,
+//           fullName: displayName,
+//           profilePicture,
+//           isVerified: true // Automatically mark as verified through Google
+//         });
+//         await user.save();
+//       } else {
+//         // Update the user's Google profile picture if available
+//         user.profilePicture = profilePicture;
+//         await user.save();
+//       }
+
+//       // Fetch the most recent meal plan
+//       const mealPlan = await MealPlan.findOne({ userId: user._id }).sort({ createdAt: -1 });
+
+//       // Generate the JWT token
+//       const token = auth.generateAuthToken(user);
+
+//       console.log(`User logged in with Google: ${email}`);
+
+//       // Return user data, token, and past meal plans
+//       // return res.status(200).json({
+//       //   token,
+//       //   user: {
+//       //     email: user.email,
+//       //     fullName: user.fullName,
+//       //     profilePicture: user.profilePicture
+//       //   },
+//       //   mealPlan: mealPlan || null // If no meal plan exists, return null
+//       // });
+//       const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${token}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+    
+//       // Perform the redirection
+//       return res.redirect(redirectUrl);
+//     } catch (error) {
+//       console.error('Error during Google login:', error);
+//       return res.status(500).json({ error: 'Failed to process Google login' });
+//     }
+//   })(req, res);
+// };
+
+
+
+
+
+
+
+
+
+
+
+// const verifyLogin = async (req, res) => {
+//   const { token } = req.query;
+
+//   try {
+//     // Verify the token using JWT and get the decoded payload
+//     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+//     console.log('Decoded token:', decoded);  // Log decoded payload to debug
+
+//     // Now, find the user based on their email in the decoded token
+//     const user = await User.findOne({ email: decoded.email });
+//     console.log('Found user:', user);
+
+//     if (!user) {
+//       return res.status(400).json({ message: 'Invalid token or user not found.' });
+//     }
+
+//     // Fetch the user's past meal plans
+//     // const mealPlan = await MealPlan.findOne({ userId: user._id }).sort({ createdAt: -1 });
+//     const authtoken = auth.generateAuthToken(user);
+
+//     // // Return the user details and meal plans
+//     // return res.status(200).json({
+//     //   authtoken,
+//     //   message: 'Login successful',
+//     //   user,
+//     //   mealPlan,
+//     // });
+
+//     // Redirect to the frontend success URL, passing the auth token and optionally other details
+//     const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${authtoken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+    
+//     // Perform the redirection
+//     return res.redirect(redirectUrl);
+
+//   } catch (error) {
+//     console.error('Token verification failed:', error);  // Log the error for debugging
+//     if (error.name === 'TokenExpiredError') {
+//       return res.status(401).json({ message: 'Token has expired, please request a new one.' });
+//     }
+//     return res.status(400).json({ message: 'Invalid or expired verification token.' });
+//   }
+// };
+
+
+
+
+
+
+
 
 const googleCallback = (req, res) => {
   passport.authenticate('google', async (err, googleUser) => {
@@ -294,41 +423,38 @@ const googleCallback = (req, res) => {
       let user = await User.findOne({ email });
 
       if (!user) {
-        // If user doesn't exist, create a new user in the database
         user = new User({
           email,
           fullName: displayName,
           profilePicture,
-          isVerified: true // Automatically mark as verified through Google
+          isVerified: true
         });
         await user.save();
       } else {
-        // Update the user's Google profile picture if available
         user.profilePicture = profilePicture;
         await user.save();
       }
 
-      // Fetch the most recent meal plan
-      const mealPlan = await MealPlan.findOne({ userId: user._id }).sort({ createdAt: -1 });
-
       // Generate the JWT token
       const token = auth.generateAuthToken(user);
 
-      console.log(`User logged in with Google: ${email}`);
+      // Create a base64 encoded string of essential user data including disliked meals
+      const userData = Buffer.from(JSON.stringify({
+        fullName: user.fullName,
+        email: user.email,
+        profilePicture: user.profilePicture,
+        isVerified: user.isVerified,
+        hasDetails: !!(user.age && user.gender && user.tribe && user.state),
+        dislikedMeals: user.dislikedMeals || [], // Include disliked meals
+        age: user.age || null,
+        gender: user.gender || null,
+        tribe: user.tribe || null,
+        state: user.state || null,
+        duration: user.duration || null
+      })).toString('base64');
 
-      // Return user data, token, and past meal plans
-      // return res.status(200).json({
-      //   token,
-      //   user: {
-      //     email: user.email,
-      //     fullName: user.fullName,
-      //     profilePicture: user.profilePicture
-      //   },
-      //   mealPlan: mealPlan || null // If no meal plan exists, return null
-      // });
-      const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${token}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+      const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${token}&id=${user._id}&email=${encodeURIComponent(user.email)}&userData=${userData}`;
     
-      // Perform the redirection
       return res.redirect(redirectUrl);
     } catch (error) {
       console.error('Error during Google login:', error);
@@ -341,48 +467,50 @@ const googleCallback = (req, res) => {
 
 
 
+
 const verifyLogin = async (req, res) => {
   const { token } = req.query;
 
   try {
-    // Verify the token using JWT and get the decoded payload
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    console.log('Decoded token:', decoded);  // Log decoded payload to debug
-
-    // Now, find the user based on their email in the decoded token
     const user = await User.findOne({ email: decoded.email });
-    console.log('Found user:', user);
 
     if (!user) {
       return res.status(400).json({ message: 'Invalid token or user not found.' });
     }
 
-    // Fetch the user's past meal plans
-    // const mealPlan = await MealPlan.findOne({ userId: user._id }).sort({ createdAt: -1 });
     const authtoken = auth.generateAuthToken(user);
 
-    // // Return the user details and meal plans
-    // return res.status(200).json({
-    //   authtoken,
-    //   message: 'Login successful',
-    //   user,
-    //   mealPlan,
-    // });
+    // Create a base64 encoded string of essential user data including disliked meals
+    const userData = Buffer.from(JSON.stringify({
+      fullName: user.fullName,
+      email: user.email,
+      profilePicture: user.profilePicture,
+      isVerified: user.isVerified,
+      hasDetails: !!(user.age && user.gender && user.tribe && user.state),
+      dislikedMeals: user.dislikedMeals || [], // Include disliked meals
+      age: user.age || null,
+      gender: user.gender || null,
+      tribe: user.tribe || null,
+      state: user.state || null,
+      duration: user.duration || null
+    })).toString('base64');
 
-    // Redirect to the frontend success URL, passing the auth token and optionally other details
-    const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${authtoken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+    const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${authtoken}&id=${user._id}&email=${encodeURIComponent(user.email)}&userData=${userData}`;
     
-    // Perform the redirection
     return res.redirect(redirectUrl);
 
   } catch (error) {
-    console.error('Token verification failed:', error);  // Log the error for debugging
+    console.error('Token verification failed:', error);
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ message: 'Token has expired, please request a new one.' });
     }
     return res.status(400).json({ message: 'Invalid or expired verification token.' });
   }
 };
+
+
+
 
 
 

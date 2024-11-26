@@ -289,4 +289,66 @@ const editMealPlanById = async (req, res) => {
   }
 };
 
-module.exports = { generateMealPlan, getPastMealPlans, getMealPlanById, deleteMealPlanById, editUserMealDetails, editMealPlanById };
+
+
+
+
+const regenerateMealPlan = async (req, res) => {
+  try {
+    // Extract the token from the Authorization header
+    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Authentication required to regenerate meal plan' });
+    }
+
+    try {
+      // Verify and decode the token
+      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+      const userEmail = decoded.email;
+
+      // Find the user and their stored details
+      const user = await User.findOne({ email: userEmail });
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Generate new meal plan using stored user details
+      const aiResponse = await sendUserDataToAI({
+        tribe: user.tribe,
+        state: user.state,
+        age: user.age,
+        gender: user.gender,
+        dislikedMeals: user.dislikedMeals,
+        duration: user.duration
+      });
+
+      // Save the new meal plan
+      const mealPlan = new MealPlan({
+        userId: user._id,
+        duration: user.duration,
+        plan: aiResponse,
+      });
+      await mealPlan.save();
+
+      // Send meal plan notification email
+      await sendMealPlanNotification(user);
+
+      return res.status(200).json({ mealPlan, token });
+
+    } catch (err) {
+      console.error('Token verification error:', err);
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+  } catch (error) {
+    console.error('Error regenerating meal plan:', error);
+    return res.status(500).json({ error: 'Failed to regenerate meal plan' });
+  }
+};
+
+
+
+
+
+module.exports = { generateMealPlan, regenerateMealPlan, getPastMealPlans, getMealPlanById, deleteMealPlanById, editUserMealDetails, editMealPlanById };
