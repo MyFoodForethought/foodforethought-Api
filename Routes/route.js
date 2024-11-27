@@ -218,7 +218,7 @@ authRouter.put('/update-plan-details', auth.tokenRequired, mealPlans.editUserMea
 authRouter.delete('/deleteplan/:mealPlanId', mealPlans.deleteMealPlanById);
 authRouter.post('/generate-token', userAuth.generateToken);
 authRouter.put('/mealplans-edit/:mealPlanId', auth.tokenRequired, mealPlans.editMealPlanById);
-authRouter.get("/regenerate-meal-plans",auth.tokenRequired, mealPlans.regenerateMealPlan);
+authRouter.post("/meal-plans/:mealPlanId/regenerate", auth.tokenRequired, mealPlans.regenerateMealPlan);
 
 authRouter.post("/submit-feedbacks", userAuth.submitFeedback);
 authRouter.get("/retrieve-feedbacks", userAuth.getFeedbacks);

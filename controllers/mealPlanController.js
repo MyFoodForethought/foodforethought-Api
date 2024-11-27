@@ -292,61 +292,50 @@ const editMealPlanById = async (req, res) => {
 
 
 
-
 const regenerateMealPlan = async (req, res) => {
   try {
-    // Extract the token from the Authorization header
-    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+    const { mealPlanId } = req.params;
+    const token = req.headers.authorization?.split(' ')[1];
     
     if (!token) {
-      return res.status(401).json({ error: 'Authentication required to regenerate meal plan' });
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
-    try {
-      // Verify and decode the token
-      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-      const userEmail = decoded.email;
-
-      // Find the user and their stored details
-      const user = await User.findOne({ email: userEmail });
-      
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      // Generate new meal plan using stored user details
-      const aiResponse = await sendUserDataToAI({
-        tribe: user.tribe,
-        state: user.state,
-        age: user.age,
-        gender: user.gender,
-        dislikedMeals: user.dislikedMeals,
-        duration: user.duration
-      });
-
-      // Save the new meal plan
-      const mealPlan = new MealPlan({
-        userId: user._id,
-        duration: user.duration,
-        plan: aiResponse,
-      });
-      await mealPlan.save();
-
-      // Send meal plan notification email
-      await sendMealPlanNotification(user);
-
-      return res.status(200).json({ mealPlan, token });
-
-    } catch (err) {
-      console.error('Token verification error:', err);
-      return res.status(401).json({ error: 'Invalid or expired token' });
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const user = await User.findOne({ email: decoded.email });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
+
+    // Find the existing meal plan
+    const existingMealPlan = await MealPlan.findById(mealPlanId);
+    if (!existingMealPlan) {
+      return res.status(404).json({ error: 'Meal plan not found' });
+    }
+
+    // Generate new meal plan
+    const aiResponse = await sendUserDataToAI({
+      tribe: user.tribe,
+      state: user.state,
+      age: user.age,
+      gender: user.gender,
+      dislikedMeals: user.dislikedMeals,
+      duration: existingMealPlan.duration // Use duration from existing plan
+    });
+
+    // Update existing meal plan
+    existingMealPlan.plan = aiResponse;
+    await existingMealPlan.save();
+
+    await sendMealPlanNotification(user);
+
+    return res.status(200).json({ mealPlan: existingMealPlan });
   } catch (error) {
     console.error('Error regenerating meal plan:', error);
     return res.status(500).json({ error: 'Failed to regenerate meal plan' });
   }
 };
-
 
 
 
