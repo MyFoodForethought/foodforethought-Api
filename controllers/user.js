@@ -1,4 +1,4 @@
-const { User } = require('../models/user');
+const { User, Feedback } = require('../models/user');
 const {MealPlan} = require('../models/mealPlan');
 const { Auth } = require('../middleware/auth');
 const { sendVerificationEmail, sendLoginVerificationEmail } = require('../services/emailService');
@@ -43,48 +43,13 @@ const verifyEmail = async (req, res) => {
       throw saveError;
     }
 
-    // let mealPlanData;
-    // try {
-    //   mealPlanData = await sendUserDataToAI({
-    //     tribe: user.tribe,
-    //     state: user.state,
-    //     age: user.age,
-    //     gender: user.gender,
-    //     duration: user.duration,
-    //     dislikedMeals: user.dislikedMeals
-    //   });
-    // } catch (aiError) {
-    //   console.error('Error sending user data to AI:', aiError);
-    //   throw aiError; // Propagate the error to be caught in the main try-catch block
-    // }
-
-    // const mealPlan = new MealPlan({
-    //   userId: user._id,
-    //   duration: user.duration,
-    //   plan: mealPlanData
-    // });
-
-    // try {
-    //   await mealPlan.save({ session });
-    //   console.log('Meal plan saved successfully');
-    // } catch (mealPlanError) {
-    //   console.error('Error saving meal plan:', mealPlanError);
-    //   throw mealPlanError;
-    // }
-
     const auth = new Auth();
     const authToken = auth.generateAuthToken(user);
 
     await session.commitTransaction();
     session.endSession();
 
-    // res.status(200).json({
-    //   message: 'Email verified successfully',
-    //   token: authToken,
-    //   userData: user
-    // });
-
-    // Redirect to the frontend success URL, passing the auth token and optionally other details
+    
     const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${authToken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
     
     // Perform the redirection
@@ -268,74 +233,6 @@ const login = async (req, res) => {
 
 
 
-
-
-// const googleLogin = passport.authenticate('google', { scope: ['profile', 'email'] });
-// const googleCallback = (req, res) => {
-//   passport.authenticate('google', async (err, googleUser) => {
-//     if (err) {
-//       console.error('Google authentication error:', err);
-//       return res.status(500).json({ error: 'Failed to authenticate with Google' });
-//     }
-
-//     if (!googleUser) {
-//       console.error('Google authentication failed: No user returned');
-//       return res.status(400).json({ error: 'Google authentication failed' });
-//     }
-
-//     try {
-//       const email = googleUser.email || null;
-//       const displayName = googleUser.displayName || '';
-//       const profilePicture = googleUser.photos && googleUser.photos.length > 0 ? googleUser.photos[0].value : null;
-
-//       if (!email) {
-//         console.error('Unable to retrieve email from Google profile');
-//         return res.status(400).json({ error: 'Unable to retrieve email from Google profile' });
-//       }
-
-//       // Find the user by email
-//       let user = await User.findOne({ email });
-
-//       if (!user) {
-//         user = new User({
-//           email,
-//           fullName: displayName,
-//           profilePicture,
-//           isVerified: true
-//         });
-//         await user.save();
-//       } else {
-//         user.profilePicture = profilePicture;
-//         await user.save();
-//       }
-
-//       // Generate the JWT token
-//       const token = auth.generateAuthToken(user);
-
-//       // Create a base64 encoded string of essential user data including disliked meals
-//       const userData = Buffer.from(JSON.stringify({
-//         fullName: user.fullName,
-//         email: user.email,
-//         profilePicture: user.profilePicture,
-//         isVerified: user.isVerified,
-//         hasDetails: !!(user.age && user.gender && user.tribe && user.state),
-//         dislikedMeals: user.dislikedMeals || [], // Include disliked meals
-//         age: user.age || null,
-//         gender: user.gender || null,
-//         tribe: user.tribe || null,
-//         state: user.state || null,
-//         duration: user.duration || null
-//       })).toString('base64');
-
-//       const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${token}&id=${user._id}&email=${encodeURIComponent(user.email)}&userData=${userData}`;
-    
-//       return res.redirect(redirectUrl);
-//     } catch (error) {
-//       console.error('Error during Google login:', error);
-//       return res.status(500).json({ error: 'Failed to process Google login' });
-//     }
-//   })(req, res);
-// };
 
 
 const googleLogin = passport.authenticate('google', { scope: ['profile', 'email'] });
@@ -711,6 +608,27 @@ const generateToken = async (req, res) => {
 };
 
 
+const submitFeedback = async (req, res) => {
+  try {
+    const { comment } = req.body;
+    const feedback = new Feedback({ comment });
+    await feedback.save();
+    res.status(201).json({ message: 'Feedback submitted successfully', feedback });
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    res.status(500).json({ error: 'Failed to submit feedback' });
+  }
+};
+
+const getFeedbacks = async (req, res) => {
+  try {
+    const feedbacks = await Feedback.find().sort({ createdAt: -1 });
+    res.status(200).json({ feedbacks });
+  } catch (error) {
+    console.error('Error retrieving feedbacks:', error);
+    res.status(500).json({ error: 'Failed to retrieve feedbacks' });
+  }
+};
 
 
-module.exports = { register, verifyEmail, verifyLogin, login, googleLogin, googleCallback, generateToken, editUser, getUserProfile, updateDislikedMeals, deleteAccount  };
+module.exports = { register, verifyEmail, getFeedbacks, submitFeedback, verifyLogin, login, googleLogin, googleCallback, generateToken, editUser, getUserProfile, updateDislikedMeals, deleteAccount  };

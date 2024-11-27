@@ -32,6 +32,17 @@ const userSchema = new Schema({
   freeMealPlans: { type: Number, default: 2 },
 });
 
+const feedbackSchema = new Schema({
+  comment: { 
+    type: String, 
+    required: true 
+  },
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  }
+});
+
 // Adding indexes
 userSchema.index({ email: 1 }); // Ensure that email field is unique (already specified with unique: true)
 userSchema.index({ age: 1 }); // Add an index on age
@@ -43,5 +54,6 @@ userSchema.index({ gender: 1 }); // Add an index on gender
 userSchema.index({ age: 1, state: 1 }); // Add a compound index on age and state
 
 const User = mongoose.model('User', userSchema);
+const Feedback = mongoose.model('Feedback', feedbackSchema);
 
-module.exports = { User, dropUserCollection };
+module.exports = { User, dropUserCollection, Feedback };
