@@ -84,7 +84,8 @@ const allowedOrigins = [
   'https://foodforethought-api-production.up.railway.app',
   'https://accounts.google.com',
    'https://foodforethought-api-production.up.railway.app/api/auth/google',
-   'https://foodforethought.xyz/',
+  'https://foodforethought.xyz',  
+  'https://foodforethought.xyz/',
   'https://foodforethought-api-production.up.railway.app/api/google/callback'
 ];
 
