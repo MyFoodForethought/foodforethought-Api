@@ -50,7 +50,7 @@ const verifyEmail = async (req, res) => {
     session.endSession();
 
     
-    const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${authToken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
+    const redirectUrl = `https://foodforethought.xyz/auth/success?token=${authToken}&id=${user._id}&email=${encodeURIComponent(user.email)}`;
     
     // Perform the redirection
     return res.redirect(redirectUrl);
@@ -318,7 +318,7 @@ const googleCallback = (req, res) => {
         freeMealPlans: user.freeMealPlans || 2
       })).toString('base64');
 
-      const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${token}&id=${user._id}&email=${encodeURIComponent(user.email)}&userData=${userData}`;
+      const redirectUrl = `https://foodforethought.xyz/auth/success?token=${token}&id=${user._id}&email=${encodeURIComponent(user.email)}&userData=${userData}`;
     
       return res.redirect(redirectUrl);
     } catch (error) {
@@ -358,7 +358,7 @@ const verifyLogin = async (req, res) => {
       duration: user.duration || null
     })).toString('base64');
 
-    const redirectUrl = `https://foodforethougt-frontend.onrender.com/auth/success?token=${authtoken}&id=${user._id}&email=${encodeURIComponent(user.email)}&userData=${userData}`;
+    const redirectUrl = `https://foodforethought.xyz/auth/success?token=${authtoken}&id=${user._id}&email=${encodeURIComponent(user.email)}&userData=${userData}`;
     
     return res.redirect(redirectUrl);
 
