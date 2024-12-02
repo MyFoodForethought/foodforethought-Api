@@ -25,7 +25,7 @@ const userSchema = new Schema({
   dislikedMeals: { type: String },
   tribe: { type: String }, // String for tribe
   state: { type: String }, // String for state
-  gender: { type: String, enum: ['male', 'female', 'other'] }, // String for gender
+  gender: { type: String, enum: ['male', 'female', 'NB'] }, // String for gender
   mealPlan: { type: Object },
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
