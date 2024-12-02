@@ -17,7 +17,7 @@ const generateMealPlanSchema = Joi.object({
   duration: Joi.string().valid('one week', 'two weeks').required(),
   dislikedMeals: Joi.string().allow('').optional(),
   age: Joi.number().required(),
-  gender: Joi.string().valid('male', 'female', 'other').required(),
+  gender: Joi.string().valid('male', 'female', 'NB').required(),
   tribe: Joi.string().required(),
   state: Joi.string().required()
 });
