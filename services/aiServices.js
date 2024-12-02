@@ -78,6 +78,12 @@ const sendUserDataToAI = async ({ tribe, state, age, gender, duration, dislikedM
       is_seven_days: duration === 'one week',  // Adjust query parameter based on duration
       disliked_meals: dislikedMeals || '', 
     };
+
+    // Handle dislikedMeals differently - if it's null/undefined, don't include it at all
+    if (dislikedMeals !== null && dislikedMeals !== undefined) {
+      // If it's an empty string, convert to a space to satisfy the API requirement
+      params.disliked_meals = dislikedMeals.trim() === '' ? ' ' : dislikedMeals;
+    }
     
     console.log('Sending request to AI service with params:', params);
     
