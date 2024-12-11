@@ -631,4 +631,87 @@ const getFeedbacks = async (req, res) => {
 };
 
 
-module.exports = { register, verifyEmail, getFeedbacks, submitFeedback, verifyLogin, login, googleLogin, googleCallback, generateToken, editUser, getUserProfile, updateDislikedMeals, deleteAccount  };
+
+
+
+
+
+const getUserStatistics = async (req, res) => {
+  try {
+    const userStats = await User.aggregate([
+      {
+        $lookup: {
+          from: 'mealplans',
+          localField: '_id',
+          foreignField: 'userId',
+          as: 'mealPlans'
+        }
+      },
+      {
+        $addFields: {
+          mealPlanCount: { $size: '$mealPlans' },
+          isVerified: { $toBool: '$isVerified' }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalUsers: { $sum: 1 },
+          verifiedUsers: { $sum: { $cond: ['$isVerified', 1, 0] } },
+          totalMealPlans: { $sum: '$mealPlanCount' },
+          averageMealPlansPerUser: { $avg: '$mealPlanCount' },
+          usersWithNoMealPlans: { 
+            $sum: { $cond: [{ $eq: ['$mealPlanCount', 0] }, 1, 0] }
+          },
+          usersByMealPlanCount: {
+            $push: {
+              userId: '$_id',
+              email: '$email',
+              mealPlanCount: '$mealPlanCount'
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          totalUsers: 1,
+          verifiedUsers: 1,
+          totalMealPlans: 1,
+          averageMealPlansPerUser: { $round: ['$averageMealPlansPerUser', 2] },
+          usersWithNoMealPlans: 1,
+          topUsersByMealPlans: {
+            $slice: [{
+              $sortArray: {
+                input: '$usersByMealPlanCount',
+                sortBy: { mealPlanCount: -1 }
+              }
+            }, 10]
+          }
+        }
+      }
+    ]);
+
+    if (!userStats.length) {
+      return res.status(200).json({
+        totalUsers: 0,
+        verifiedUsers: 0,
+        totalMealPlans: 0,
+        averageMealPlansPerUser: 0,
+        usersWithNoMealPlans: 0,
+        topUsersByMealPlans: []
+      });
+    }
+
+    res.status(200).json(userStats[0]);
+  } catch (error) {
+    console.error('Error getting user statistics:', error);
+    res.status(500).json({ error: 'Failed to retrieve user statistics' });
+  }
+};
+
+
+
+
+
+module.exports = { register, verifyEmail, getFeedbacks, getUserStatistics, submitFeedback, verifyLogin, login, googleLogin, googleCallback, generateToken, editUser, getUserProfile, updateDislikedMeals, deleteAccount  };

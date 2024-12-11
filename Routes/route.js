@@ -222,6 +222,7 @@ authRouter.post("/meal-plans/:mealPlanId/regenerate", auth.tokenRequired, mealPl
 
 authRouter.post("/submit-feedbacks", userAuth.submitFeedback);
 authRouter.get("/retrieve-feedbacks", userAuth.getFeedbacks);
+authRouter.get("/user-statistics", auth.tokenRequired, userAuth.getUserStatistics);
 
 
 
