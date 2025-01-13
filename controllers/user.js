@@ -511,8 +511,6 @@ const getUserProfile = async (req, res) => {
 // };
 
 
-
-
 const updateDislikedMeals = async (req, res) => {
   try {
     const userEmail = req.user;
@@ -527,20 +525,22 @@ const updateDislikedMeals = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Extract dislikedMeals from request body, default to empty array if not provided
-    const { dislikedMeals = [] } = req.body;
+    // Extract dislikedMeals from request body, default to empty string if not provided
+    const { dislikedMeals = '' } = req.body;
 
     // Handle different input types
     let processedDislikedMeals;
     if (typeof dislikedMeals === 'string') {
-      // If it's an empty string or just whitespace, set to empty array
-      processedDislikedMeals = dislikedMeals.trim() ? dislikedMeals.split(',').map(meal => meal.trim()) : [];
+      // If it's an empty string or just whitespace, keep it empty
+      processedDislikedMeals = dislikedMeals.trim();
     } else if (Array.isArray(dislikedMeals)) {
-      // If it's already an array, filter out empty strings and whitespace
-      processedDislikedMeals = dislikedMeals.filter(meal => meal && meal.trim());
+      // If it's an array, join with commas and filter out empty entries
+      processedDislikedMeals = dislikedMeals
+        .filter(meal => meal && meal.trim())
+        .join(',');
     } else {
-      // If it's neither string nor array, set to empty array
-      processedDislikedMeals = [];
+      // If it's neither string nor array, set to empty string
+      processedDislikedMeals = '';
     }
 
     console.log('Updating disliked meals to:', processedDislikedMeals);
@@ -562,7 +562,6 @@ const updateDislikedMeals = async (req, res) => {
     res.status(500).json({ error: 'Failed to update disliked meals', details: error.message });
   }
 };
-
 
 
 
