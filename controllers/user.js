@@ -467,33 +467,86 @@ const getUserProfile = async (req, res) => {
 };
 
 
+// const updateDislikedMeals = async (req, res) => {
+//   try {
+//     // The email is now directly in req.user
+//     const userEmail = req.user; // Ensure req.user contains the email extracted from the token
+    
+//     if (!userEmail) {
+//       return res.status(400).json({ error: 'No email found in the token' });
+//     }
+
+//     // Find the user by email
+//     const user = await User.findOne({ email: userEmail });
+
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found' });
+//     }
+
+//     // Extract dislikedMeals from request body
+//     const { dislikedMeals } = req.body;
+
+//     if (!dislikedMeals) {
+//       return res.status(400).json({ error: 'No disliked meals provided' });
+//     }
+
+//     console.log('Updating disliked meals to:', dislikedMeals);
+
+//     // Update dislikedMeals field
+//     user.dislikedMeals = dislikedMeals;
+
+//     // Save the updated user
+//     await user.save();
+
+//     console.log('Disliked meals updated successfully');
+
+//     res.status(200).json({
+//       message: 'Disliked meals updated successfully',
+//       dislikedMeals: user.dislikedMeals // Return the updated disliked meals
+//     });
+//   } catch (error) {
+//     console.error('Error in updateDislikedMeals:', error);
+//     res.status(500).json({ error: 'Failed to update disliked meals', details: error.message });
+//   }
+// };
+
+
+
+
 const updateDislikedMeals = async (req, res) => {
   try {
-    // The email is now directly in req.user
-    const userEmail = req.user; // Ensure req.user contains the email extracted from the token
+    const userEmail = req.user;
     
     if (!userEmail) {
       return res.status(400).json({ error: 'No email found in the token' });
     }
 
-    // Find the user by email
     const user = await User.findOne({ email: userEmail });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Extract dislikedMeals from request body
-    const { dislikedMeals } = req.body;
+    // Extract dislikedMeals from request body, default to empty array if not provided
+    const { dislikedMeals = [] } = req.body;
 
-    if (!dislikedMeals) {
-      return res.status(400).json({ error: 'No disliked meals provided' });
+    // Handle different input types
+    let processedDislikedMeals;
+    if (typeof dislikedMeals === 'string') {
+      // If it's an empty string or just whitespace, set to empty array
+      processedDislikedMeals = dislikedMeals.trim() ? dislikedMeals.split(',').map(meal => meal.trim()) : [];
+    } else if (Array.isArray(dislikedMeals)) {
+      // If it's already an array, filter out empty strings and whitespace
+      processedDislikedMeals = dislikedMeals.filter(meal => meal && meal.trim());
+    } else {
+      // If it's neither string nor array, set to empty array
+      processedDislikedMeals = [];
     }
 
-    console.log('Updating disliked meals to:', dislikedMeals);
+    console.log('Updating disliked meals to:', processedDislikedMeals);
 
     // Update dislikedMeals field
-    user.dislikedMeals = dislikedMeals;
+    user.dislikedMeals = processedDislikedMeals;
 
     // Save the updated user
     await user.save();
@@ -502,13 +555,15 @@ const updateDislikedMeals = async (req, res) => {
 
     res.status(200).json({
       message: 'Disliked meals updated successfully',
-      dislikedMeals: user.dislikedMeals // Return the updated disliked meals
+      dislikedMeals: user.dislikedMeals
     });
   } catch (error) {
     console.error('Error in updateDislikedMeals:', error);
     res.status(500).json({ error: 'Failed to update disliked meals', details: error.message });
   }
 };
+
+
 
 
 const deleteAccount = async (req, res) => {
