@@ -64,7 +64,27 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const axios = require('axios');
+const https = require('https');
 
 const sendUserDataToAI = async ({ tribe, state, age, gender, duration, dislikedMeals }) => {
   try {
@@ -77,26 +97,26 @@ const sendUserDataToAI = async ({ tribe, state, age, gender, duration, dislikedM
       disliked_meals: dislikedMeals || '', 
     };
 
-    // Handle dislikedMeals
     if (dislikedMeals !== null && dislikedMeals !== undefined) {
       params.disliked_meals = dislikedMeals.trim() === '' ? ' ' : dislikedMeals;
     }
     
-    console.log('Sending request to AI service with params:', params);
+    console.log('Attempting to connect to AI service with params:', params);
     
-    // Create Axios instance with custom config
+    // Create Axios instance with modified config
     const aiService = axios.create({
       baseURL: 'http://213.199.35.161',
-      timeout: 180000, // Increased timeout to 3 minutes
+      timeout: 180000,
       headers: {
         'Authorization': `Bearer ${process.env.AI_API_TOKEN}`,
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Connection': 'keep-alive'
       },
-      // Add retry logic
       validateStatus: status => status < 500,
       maxRedirects: 5,
-      maxContentLength: 50 * 1000 * 1000, // 50MB
-      httpsAgent: new (require('https').Agent)({ 
+      maxContentLength: 50 * 1000 * 1000,
+      // Modified agent configuration
+      httpAgent: new (require('http').Agent)({ 
         keepAlive: true,
         keepAliveMsecs: 60000,
         timeout: 180000,
@@ -104,7 +124,7 @@ const sendUserDataToAI = async ({ tribe, state, age, gender, duration, dislikedM
       })
     });
 
-    // Add request interceptor for logging
+    // Simplified request interceptor
     aiService.interceptors.request.use(request => {
       console.log('Starting AI service request:', {
         url: request.url,
@@ -115,7 +135,7 @@ const sendUserDataToAI = async ({ tribe, state, age, gender, duration, dislikedM
       return request;
     });
 
-    // Add response interceptor for logging
+    // Simplified response interceptor
     aiService.interceptors.response.use(
       response => {
         console.log('AI service response received:', {
@@ -133,54 +153,62 @@ const sendUserDataToAI = async ({ tribe, state, age, gender, duration, dislikedM
         throw error;
       }
     );
-    
-    const response = await aiService.get('/get_mealplan/', { params });
-    
-    if (!response.data) {
-      throw new Error('Empty response from AI service');
+
+    // Make the request with retry logic
+    let retries = 3;
+    let lastError = null;
+
+    while (retries > 0) {
+      try {
+        const response = await aiService.get('/get_mealplan/', { params });
+        
+        if (!response.data) {
+          throw new Error('Empty response from AI service');
+        }
+        
+        return response.data;
+      } catch (error) {
+        lastError = error;
+        retries--;
+        if (retries > 0) {
+          console.log(`Retrying request. ${retries} attempts remaining`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+        }
+      }
     }
-    
-    console.log('Received response from AI service:', {
-      status: response.status,
-      dataSize: JSON.stringify(response.data).length
-    });
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error in sendUserDataToAI:', {
+
+    // If we get here, all retries failed
+    console.error('Error in sendUserDataToAI after all retries:', {
       timestamp: new Date().toISOString(),
-      error: error.message,
-      stack: error.stack
+      error: lastError.message
     });
     
-    if (axios.isAxiosError(error)) {
-      if (error.response) {
+    if (axios.isAxiosError(lastError)) {
+      if (lastError.response) {
         console.error('AI service error details:', {
-          status: error.response.status,
-          data: error.response.data,
-          headers: error.response.headers,
+          status: lastError.response.status,
+          data: lastError.response.data
         });
         
-        // Handle specific status codes
-        if (error.response.status === 502) {
+        if (lastError.response.status === 502) {
           throw new Error('AI service temporarily unavailable. Please try again in a few minutes.');
         }
-        if (error.response.status === 504) {
+        if (lastError.response.status === 504) {
           throw new Error('AI service request timed out. Please try again.');
         }
-      } else if (error.request) {
-        console.error('No response received:', {
-          request: {
-            method: error.request.method,
-            path: error.request.path,
-            headers: error.request.getHeaders()
-          }
-        });
-        throw new Error('Unable to reach AI service. Please try again later.');
+      } else if (lastError.code === 'EHOSTUNREACH') {
+        throw new Error('Unable to reach AI service. Please check the service endpoint or try again later.');
       }
     }
     
-    throw new Error('Failed to generate meal plan: ' + error.message);
+    throw new Error('Failed to generate meal plan: ' + lastError.message);
+  } catch (error) {
+    console.error('Final error in sendUserDataToAI:', {
+      message: error.message,
+      code: error.code,
+      timestamp: new Date().toISOString()
+    });
+    throw error;
   }
 };
 
