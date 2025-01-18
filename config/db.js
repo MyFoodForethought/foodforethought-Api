@@ -136,20 +136,18 @@ const uri = process.env.MONGO_URI || process.env.MONGO_URI_LOCAL;
 
 // Enhanced MongoDB connection options
 const mongooseOptions = {
-  maxPoolSize: 50,           // Maximum number of connections in the pool
-  minPoolSize: 10,           // Minimum number of connections in the pool
-  socketTimeoutMS: 45000,    // Close sockets after 45 seconds of inactivity
-  serverSelectionTimeoutMS: 30000, // Timeout for server selection
-  family: 4,                 // Use IPv4, skip trying IPv6
-  keepAlive: true,          // Keep connections alive
-  keepAliveInitialDelay: 300000, // How long to wait before sending keepAlive
-  connectTimeoutMS: 30000,   // Give up initial connection after 30 seconds
-  retryWrites: true,        // Retry write operations upon failure
-  w: 'majority',            // Write concern: wait for majority of replicas
-  readPreference: 'primary', // Read from primary node
-  autoIndex: false,         // Don't build indexes automatically in production
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-  heartbeatFrequencyMS: 10000, // Check connection every 10 seconds
+  maxPoolSize: 50,           
+  minPoolSize: 10,           
+  socketTimeoutMS: 45000,    
+  serverSelectionTimeoutMS: 30000, 
+  family: 4,                 
+  connectTimeoutMS: 30000,   
+  retryWrites: true,        
+  w: 'majority',            
+  readPreference: 'primary', 
+  autoIndex: false,         
+  heartbeatFrequencyMS: 10000
+  // Removed: keepAlive and keepAliveInitialDelay as they're not supported
 };
 
 // Connection monitoring and management
