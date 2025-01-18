@@ -4,7 +4,9 @@ const { Auth } = require("../middleware/auth");
 const userAuth = require("../controllers/user");
 const mealPlans = require("../controllers/mealPlanController");
 const { validate, registerSchema, loginSchema, generateMealPlanSchema, updateUserSchema } = require("../middleware/val");
+const { apiLimiter, mealPlanLimiter, authLimiter } = require("../config/ratelimiter")
 const auth = new Auth();
+
 
 
 /**
@@ -208,21 +210,32 @@ authRouter.get("/get/past-plans", auth.tokenRequired, mealPlans.getPastMealPlans
  *       401:
  *         description: Unauthorized
  */
-authRouter.put('/update/user', auth.tokenRequired, validate(updateUserSchema), userAuth.editUser);
+authRouter.put('/update/user', auth.tokenRequired,  apiLimiter, validate(updateUserSchema), userAuth.editUser);
 
-authRouter.get("/user-profile", auth.tokenRequired, userAuth.getUserProfile);
-authRouter.put("/update-disliked-meals", auth.tokenRequired, userAuth.updateDislikedMeals);
-authRouter.delete("/delete-account", auth.tokenRequired, userAuth.deleteAccount);
-authRouter.get('/mealplans/:mealPlanId', mealPlans.getMealPlanById);
-authRouter.put('/update-plan-details', auth.tokenRequired, mealPlans.editUserMealDetails)
-authRouter.delete('/deleteplan/:mealPlanId', mealPlans.deleteMealPlanById);
+authRouter.get("/user-profile", auth.tokenRequired,   apiLimiter, userAuth.getUserProfile);
+authRouter.put("/update-disliked-meals", auth.tokenRequired,  apiLimiter, userAuth.updateDislikedMeals);
+authRouter.delete("/delete-account", auth.tokenRequired,  apiLimiter, userAuth.deleteAccount);
+authRouter.get('/mealplans/:mealPlanId', apiLimiter, mealPlans.getMealPlanById);
+authRouter.put('/update-plan-details',  mealPlanLimiter, auth.tokenRequired, mealPlans.editUserMealDetails)
+authRouter.delete('/deleteplan/:mealPlanId',  mealPlanLimiter, mealPlans.deleteMealPlanById);
 authRouter.post('/generate-token', userAuth.generateToken);
-authRouter.put('/mealplans-edit/:mealPlanId', auth.tokenRequired, mealPlans.editMealPlanById);
-authRouter.post("/meal-plans/:mealPlanId/regenerate", auth.tokenRequired, mealPlans.regenerateMealPlan);
+authRouter.put('/mealplans-edit/:mealPlanId',  mealPlanLimiter, auth.tokenRequired, mealPlans.editMealPlanById);
+authRouter.post("/meal-plans/:mealPlanId/regenerate",  mealPlanLimiter, auth.tokenRequired, mealPlans.regenerateMealPlan);
 
 authRouter.post("/submit-feedbacks", userAuth.submitFeedback);
 authRouter.get("/retrieve-feedbacks", userAuth.getFeedbacks);
 authRouter.get("/user-statistics", auth.tokenRequired, userAuth.getUserStatistics);
+
+
+authRouter.use((err, req, res, next) => {
+  if (err.status === 429) {
+    return res.status(429).json({
+      error: 'Too many requests, please try again later',
+      retryAfter: err.retryAfter
+    });
+  }
+  next(err);
+});
 
 
 
