@@ -22,7 +22,7 @@ const apiLimiter = rateLimit({
 // Specific limiter for meal plan generation
 const mealPlanLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // 5 requests per hour // Limit each IP to 10 meal plan generations per hour
+  max: 5, // 5 requests per hour // 
   message: 'Meal plan generation limit reached, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
