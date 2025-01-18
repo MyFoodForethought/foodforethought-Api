@@ -154,7 +154,7 @@ authRouter.get("/google/callback", userAuth.googleCallback);
  *         description: Bad request
  */
 
-authRouter.post("/get/generate-meal-plans", validate(generateMealPlanSchema), mealPlans.generateMealPlan);
+authRouter.post("/get/generate-meal-plans", validate(generateMealPlanSchema), mealPlanLimiter, mealPlans.generateMealPlan);
 /**
  * @swagger
  * /api/get/past-plans:
@@ -212,12 +212,12 @@ authRouter.get("/get/past-plans", auth.tokenRequired, mealPlans.getPastMealPlans
  */
 authRouter.put('/update/user', auth.tokenRequired,  apiLimiter, validate(updateUserSchema), userAuth.editUser);
 
-authRouter.get("/user-profile", auth.tokenRequired,   apiLimiter, userAuth.getUserProfile);
-authRouter.put("/update-disliked-meals", auth.tokenRequired,  apiLimiter, userAuth.updateDislikedMeals);
-authRouter.delete("/delete-account", auth.tokenRequired,  apiLimiter, userAuth.deleteAccount);
-authRouter.get('/mealplans/:mealPlanId', apiLimiter, mealPlans.getMealPlanById);
+authRouter.get("/user-profile",  apiLimiter, auth.tokenRequired,   userAuth.getUserProfile);
+authRouter.put("/update-disliked-meals", apiLimiter, auth.tokenRequired,  userAuth.updateDislikedMeals);
+authRouter.delete("/delete-account", apiLimiter, auth.tokenRequired,  userAuth.deleteAccount);
+authRouter.get('/mealplans/:mealPlanId', mealPlans.getMealPlanById);
 authRouter.put('/update-plan-details',  mealPlanLimiter, auth.tokenRequired, mealPlans.editUserMealDetails)
-authRouter.delete('/deleteplan/:mealPlanId',  mealPlanLimiter, mealPlans.deleteMealPlanById);
+authRouter.delete('/deleteplan/:mealPlanId',  mealPlans.deleteMealPlanById);
 authRouter.post('/generate-token', userAuth.generateToken);
 authRouter.put('/mealplans-edit/:mealPlanId',  mealPlanLimiter, auth.tokenRequired, mealPlans.editMealPlanById);
 authRouter.post("/meal-plans/:mealPlanId/regenerate",  mealPlanLimiter, auth.tokenRequired, mealPlans.regenerateMealPlan);
